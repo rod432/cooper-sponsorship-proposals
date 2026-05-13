@@ -43,9 +43,19 @@ The source's `src/components/ui/*` is plain shadcn/ui at typical revision. Faste
 
 Filenames were converted from PascalCase (`PlayerDetailsCard.tsx`) to kebab-case (`player-details-card.tsx`) to match Next.js community convention. Component default-export names unchanged.
 
-## 7. Baseline seed migration — `20260513000000_seed_baseline.sql`
+## 7. Full catalog imported from the original Lovable DB — `20260513131500_import_full_catalog.sql`
 
-The new Supabase project starts empty. Without categories, products, spec types and standard terms the app renders empty states everywhere on first boot. I added a small idempotent seed of 5 categories, 6 products, 3 spec types with options, 4 colours, and 4 standard terms — enough to demo the proposal builder end-to-end. Safe to delete or replace via the Catalog/Terms UIs.
+The new Supabase project started empty. I dumped the live catalog from the original Lovable Supabase project (`zfjcuzbpawnprzjofovm`) via the anon REST API and turned it into an idempotent migration. UUIDs preserved end-to-end so any future cross-environment imports stay consistent.
+
+Counts after import (match the source exactly):
+- 8 categories (Bats, Gloves, Pads, Protection, Bags, Accessories, Apparel, Footwear)
+- 57 products
+- 13 spec types (Willow Grade, Sticker Colour/Design, Grip, Face Protection, Handle Length/Shape/Thickness, Finished Weight, Toe Protection, Knocking In, Bat Size, Toe Shape)
+- 95 spec options
+- 12 colour options
+- 14 standard terms (Tiered Discount, Early Termination & Exit Fee, Specialist Equipment Exception, etc.)
+
+The migration is `ON CONFLICT (id) DO UPDATE` so re-running it (Supabase CLI `db push`, or a CI deploy) will sync any column changes without orphaning rows. Replaced the earlier placeholder `20260513000000_seed_baseline.sql` (now deleted).
 
 ## 8. Permissive RLS preserved
 
