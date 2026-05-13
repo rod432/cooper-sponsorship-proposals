@@ -92,3 +92,43 @@ Next.js scaffold installed `eslint.config.mjs` with the Next.js flat-config pres
 ## 14. Custom 404 page
 
 Next.js auto-renders `not-found.tsx`. Replaced the source's `useEffect(() => console.error(...))` with a clean message page. The console.error was debugging noise, not user-facing behaviour.
+
+## 15. Public approval flow — new feature beyond the source
+
+The source's `/proposals` page was a placeholder. Rod asked for two new things: a working proposals list, and the ability to email a proposal to a player who can approve, decline, or request changes.
+
+**Schema additions** (`20260514120000_add_approval_flow.sql`):
+
+- `proposals.public_token uuid UNIQUE DEFAULT gen_random_uuid()` — unguessable URL token. Player URLs use this, not the primary key, so the row ID is never exposed.
+- `proposals.player_email text` — email captured on the proposal form, used as the default Send recipient.
+- `proposals.sent_at timestamptz` — set when the proposal is sent. `status` already existed; values now `draft | sent | approved | declined | changes_requested`.
+- `proposal_responses` — one row per approve/decline/request-changes click, with an optional message. Stores the full history (a player can request changes multiple times before approving).
+- Trigger `trg_proposals_updated_at` — keeps `updated_at` fresh on every UPDATE, replacing the source's manual `updated_at: new Date().toISOString()` payload field.
+
+**Routing**:
+
+- New route group `src/app/(staff)/` holds the existing staff routes (`/`, `/proposals`, `/catalog`, `/terms`) with the Cooper-branded `AppHeader`.
+- New public route `src/app/p/[token]/` has its own minimal layout (logo only, no nav) and is server-rendered. Players never see staff nav.
+
+**Email transport** (`src/app/(staff)/actions.ts → sendProposal`):
+
+- Server action. If `RESEND_API_KEY` is set, sends server-side via Resend (from `RESEND_FROM_ADDRESS`, defaults to `proposals@coopercricket.com.au`). Otherwise returns a `mailto:` link the staff member can click in the dialog to open their default mail client with the message pre-filled. Either way, status flips to `sent` and `sent_at` is stamped.
+- Same action handles both flows so the UI doesn't branch on transport.
+- The send dialog also shows the public link with a Copy button — useful for SMS / WhatsApp / personal handoff.
+
+**Form changes**:
+
+- `PlayerDetailsCard` now has a third field for player email. Persisted on save.
+- `create-proposal-view.tsx` auto-saves before opening the Send dialog (you can't send a proposal that doesn't exist yet).
+- After the first save, the URL flips to `/?editId=<id>` so subsequent saves update rather than insert.
+
+**Header**:
+
+- "Email" button renamed to "Send" (matches the dialog).
+- "PDF" button was previously calling `save` (source bug, called out in §9). Now it correctly switches to the Print PDF tab via a new `printPdf` action on `window.__proposalActions`. **REVIEW**: source-divergence — keeping the fix because the source behaviour was a clear bug.
+
+**REVIEW for Rod**:
+
+- The Resend `RESEND_FROM_ADDRESS` defaults to `proposals@coopercricket.com.au`. That domain needs to be verified in Resend (DKIM/SPF) before sends will work. If you want a different sender, set `RESEND_FROM_ADDRESS` in Vercel env vars.
+- The flow currently allows multiple responses (e.g. request changes → request changes → approve). Final `approved` / `declined` locks further responses. If you want stricter rules — e.g. only one response allowed total — change the guard in `src/app/p/[token]/actions.ts`.
+- Public proposal pages are open to anyone with the token. That's the point (the player needs to view without logging in). If a token leaks, anyone can approve/decline. Lower-risk than the existing permissive RLS on everything else, but worth knowing.

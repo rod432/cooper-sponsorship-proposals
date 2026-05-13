@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Outfit } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
-import AppHeader from "@/components/app-header";
 
 const outfit = Outfit({
   variable: "--font-outfit",
@@ -25,10 +24,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={outfit.variable}>
       <body className="min-h-screen bg-background">
-        <Providers>
-          <AppHeader />
-          <main className="mx-auto max-w-3xl px-4 py-6">{children}</main>
-        </Providers>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

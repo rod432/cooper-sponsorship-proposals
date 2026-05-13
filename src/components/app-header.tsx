@@ -15,6 +15,7 @@ const navItems = [
 type ProposalActions = {
   save?: () => void;
   email?: () => void;
+  printPdf?: () => void;
   isSaving?: boolean;
 };
 
@@ -35,6 +36,10 @@ export default function AppHeader() {
 
   const handleEmail = () => {
     window.__proposalActions?.email?.();
+  };
+
+  const handlePdf = () => {
+    window.__proposalActions?.printPdf?.();
   };
 
   return (
@@ -82,7 +87,7 @@ export default function AppHeader() {
                 variant="ghost"
                 size="sm"
                 className="text-primary-foreground/80 hover:bg-primary-foreground/10 hover:text-primary-foreground"
-                onClick={handleSave}
+                onClick={handlePdf}
               >
                 <FileText className="mr-1.5 h-4 w-4" />
                 PDF
@@ -94,7 +99,7 @@ export default function AppHeader() {
                 onClick={handleEmail}
               >
                 <Mail className="mr-1.5 h-4 w-4" />
-                Email
+                Send
               </Button>
               <Button
                 variant="ghost"

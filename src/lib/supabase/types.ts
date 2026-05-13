@@ -98,6 +98,38 @@ export type Database = {
           },
         ]
       }
+      proposal_responses: {
+        Row: {
+          id: string
+          message: string
+          proposal_id: string
+          responded_at: string
+          response_type: string
+        }
+        Insert: {
+          id?: string
+          message?: string
+          proposal_id: string
+          responded_at?: string
+          response_type: string
+        }
+        Update: {
+          id?: string
+          message?: string
+          proposal_id?: string
+          responded_at?: string
+          response_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_responses_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proposals: {
         Row: {
           ai_image_rights: boolean
@@ -110,7 +142,10 @@ export type Database = {
           items: Json
           notes: string
           photo_provisions: boolean
+          player_email: string
           player_name: string
+          public_token: string
+          sent_at: string | null
           status: string
           terms: Json
           updated_at: string
@@ -127,7 +162,10 @@ export type Database = {
           items?: Json
           notes?: string
           photo_provisions?: boolean
+          player_email?: string
           player_name?: string
+          public_token?: string
+          sent_at?: string | null
           status?: string
           terms?: Json
           updated_at?: string
@@ -144,7 +182,10 @@ export type Database = {
           items?: Json
           notes?: string
           photo_provisions?: boolean
+          player_email?: string
           player_name?: string
+          public_token?: string
+          sent_at?: string | null
           status?: string
           terms?: Json
           updated_at?: string

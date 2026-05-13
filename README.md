@@ -41,15 +41,23 @@ This is the production Next.js rebuild of an earlier Lovable prototype.
 
 ```
 src/
-  app/                       — Next.js App Router pages
-    page.tsx                 — `/`         Create/edit proposal (the workhorse)
-    create-proposal-view.tsx — client component holding the proposal state
-    proposals/page.tsx       — `/proposals` Saved proposals list (placeholder)
-    catalog/page.tsx         — `/catalog`   CRUD for products, categories, specs, colours
-    terms/page.tsx           — `/terms`     CRUD for the standard terms library
-    layout.tsx               — root layout: Outfit font, providers, header
+  app/
+    layout.tsx               — root layout: Outfit font, providers
     globals.css              — Tailwind v4 + design tokens
     not-found.tsx            — 404
+    (staff)/                 — staff routes (Cooper-branded header + nav)
+      layout.tsx
+      actions.ts             — `sendProposal` server action (Resend + mailto)
+      page.tsx               — `/`            Create/edit proposal (the workhorse)
+      create-proposal-view.tsx
+      proposals/page.tsx     — `/proposals`   Saved proposals list w/ status, search, actions
+      catalog/page.tsx       — `/catalog`     CRUD for products, categories, specs, colours
+      terms/page.tsx         — `/terms`       CRUD for the standard terms library
+    p/[token]/               — public approval page (minimal layout, no staff nav)
+      layout.tsx
+      page.tsx               — read-only proposal + response history
+      response-form.tsx      — Approve / Decline / Request changes form
+      actions.ts             — `submitResponse` server action
   components/
     app-header.tsx           — sticky header w/ logo, nav, save/PDF/email shortcuts
     providers.tsx            — React Query + Tooltip + Toaster providers
@@ -86,7 +94,8 @@ Supabase project **`cooper-sponsorship-proposals`** (project ref `bpivibtphwnuci
 - `spec_options` — values within a spec type, with an optional price.
 - `colour_options` — flat list of colour names for categories flagged `has_colour_variants`.
 - `standard_terms` — title + body of reusable legal clauses, sortable.
-- `proposals` — the actual saved proposals. `items`, `clauses`, `terms` are JSONB blobs.
+- `proposals` — the actual saved proposals. `items`, `clauses`, `terms` are JSONB blobs. `public_token` is the unguessable URL token the player sees; `status` is `draft | sent | approved | declined | changes_requested`.
+- `proposal_responses` — one row per approve / decline / request-changes click from a player.
 
 All tables have RLS enabled with a permissive `Allow all access` policy. The app is currently open-access; tighten policies if/when you add auth.
 
@@ -116,8 +125,11 @@ Hosted on **Vercel** as the project `cooper-sponsorship-proposals` (team `rod-gr
 
 Set env vars in **Vercel Project Settings → Environment Variables** for Production and Preview:
 
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `NEXT_PUBLIC_SUPABASE_URL` (required)
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` (required)
+- `RESEND_API_KEY` (optional) — when set, the Send-to-Player button sends server-side via Resend instead of opening the staff member's mail client.
+- `RESEND_FROM_ADDRESS` (optional) — defaults to `Cooper Cricket <proposals@coopercricket.com.au>`. The sending domain must be verified in Resend.
+- `NEXT_PUBLIC_SITE_URL` (optional) — overrides the auto-detected base URL used in proposal links. Set this if you put the app behind a custom domain.
 
 Push to `main` triggers a production deploy via the GitHub integration.
 

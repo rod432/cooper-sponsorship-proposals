@@ -1,0 +1,120 @@
+import { notFound } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import ProposalPreview from "@/components/proposal/proposal-preview";
+import type { ProposalItem } from "@/components/proposal/equipment-catalog-card";
+import type { SelectedTerm } from "@/components/proposal/standard-terms-card";
+import ResponseForm from "./response-form";
+import { STATUS_BADGE_CLASSES, STATUS_LABELS } from "@/lib/proposal-totals";
+
+export const dynamic = "force-dynamic";
+
+export default async function PublicProposalPage({
+  params,
+}: {
+  params: Promise<{ token: string }>;
+}) {
+  const { token } = await params;
+  const supabase = await createClient();
+
+  const { data: proposal, error } = await supabase
+    .from("proposals")
+    .select("*, proposal_responses(id, response_type, message, responded_at)")
+    .eq("public_token", token)
+    .single();
+
+  if (error || !proposal) notFound();
+
+  const items = (proposal.items as unknown as ProposalItem[]) ?? [];
+  const selectedTerms = (proposal.terms as unknown as SelectedTerm[]) ?? [];
+  const clauses = (proposal.clauses as unknown as string[]) ?? [];
+
+  const responses = proposal.proposal_responses ?? [];
+  const finalised =
+    proposal.status === "approved" || proposal.status === "declined";
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-lg border bg-card p-4 shadow-sm">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Sponsorship proposal for
+            </p>
+            <h1 className="font-heading text-xl font-bold text-foreground">
+              {proposal.player_name || "—"}
+            </h1>
+          </div>
+          <span
+            className={`rounded-full px-3 py-1 text-xs font-medium ${
+              STATUS_BADGE_CLASSES[proposal.status] ?? "bg-muted text-muted-foreground"
+            }`}
+          >
+            {STATUS_LABELS[proposal.status] ?? proposal.status}
+          </span>
+        </div>
+      </div>
+
+      <ProposalPreview
+        playerName={proposal.player_name}
+        dealDuration={proposal.deal_duration}
+        items={items}
+        discountPercent={Number(proposal.discount_percent)}
+        cashIncentive={Number(proposal.cash_incentive)}
+        clauses={clauses}
+        aiImageRights={proposal.ai_image_rights}
+        photoProvisions={proposal.photo_provisions}
+        selectedTerms={selectedTerms}
+        customTerms={[]}
+        notes={proposal.notes}
+      />
+
+      {finalised ? (
+        <div className="rounded-lg border bg-card p-6 text-center">
+          <p className="font-heading text-lg font-semibold text-foreground">
+            This proposal has been {proposal.status === "approved" ? "approved" : "declined"}.
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Need to change something? Contact Cooper Cricket directly.
+          </p>
+        </div>
+      ) : (
+        <ResponseForm token={token} />
+      )}
+
+      {responses.length > 0 && (
+        <div className="rounded-lg border bg-card p-4">
+          <h3 className="mb-3 font-heading text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+            Response history
+          </h3>
+          <ul className="space-y-3">
+            {responses
+              .slice()
+              .sort(
+                (a, b) =>
+                  new Date(b.responded_at).getTime() - new Date(a.responded_at).getTime(),
+              )
+              .map((r) => (
+                <li key={r.id} className="border-b pb-3 last:border-0 last:pb-0">
+                  <p className="text-sm font-medium text-foreground">
+                    {r.response_type === "approve"
+                      ? "Approved"
+                      : r.response_type === "decline"
+                        ? "Declined"
+                        : "Changes requested"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(r.responded_at).toLocaleString("en-AU")}
+                  </p>
+                  {r.message && (
+                    <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">
+                      {r.message}
+                    </p>
+                  )}
+                </li>
+              ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
