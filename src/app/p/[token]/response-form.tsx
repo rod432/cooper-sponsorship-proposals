@@ -4,20 +4,32 @@ import { useState, useTransition } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Check, X, MessageSquare } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Check, X, MessageSquare, Pencil } from "lucide-react";
 import { submitResponse } from "./actions";
 
 type Choice = "approve" | "decline" | "request_changes";
 
 const labels: Record<Choice, string> = {
-  approve: "Approve",
+  approve: "Approve & Sign",
   decline: "Decline",
   request_changes: "Request changes",
 };
 
-export default function ResponseForm({ token }: { token: string }) {
+type Props = {
+  token: string;
+  defaultPlayerName?: string;
+};
+
+export default function ResponseForm({ token, defaultPlayerName = "" }: Props) {
+  const [under18, setUnder18] = useState(false);
   const [choice, setChoice] = useState<Choice | null>(null);
   const [message, setMessage] = useState("");
+  const [signedName, setSignedName] = useState(defaultPlayerName);
+  const [parentSignedName, setParentSignedName] = useState("");
+  const [agree, setAgree] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<Choice | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -25,17 +37,47 @@ export default function ResponseForm({ token }: { token: string }) {
   const submit = () => {
     if (!choice) return;
     setError(null);
+
+    if (choice === "approve") {
+      if (signedName.trim().length < 2) {
+        setError("Please type your full legal name to sign.");
+        return;
+      }
+      if (under18 && parentSignedName.trim().length < 2) {
+        setError("A parent or guardian also needs to type their full name.");
+        return;
+      }
+      if (!agree) {
+        setError("Please tick the box to confirm you agree to the terms.");
+        return;
+      }
+    } else if (message.trim().length === 0) {
+      setError("Please add a short note so Cooper Cricket understands what's needed.");
+      return;
+    }
+
     startTransition(async () => {
-      const res = await submitResponse(token, choice, message);
+      const res = await submitResponse({
+        token,
+        responseType: choice,
+        message,
+        signedName: choice === "approve" ? signedName.trim() : "",
+        parentSignedName: choice === "approve" && under18 ? parentSignedName.trim() : "",
+        under18,
+      });
       if (res.ok) {
         setDone(choice);
+        // Reload so the page re-renders in its signed state.
+        if (choice === "approve") {
+          window.location.reload();
+        }
       } else {
         setError(res.error ?? "Something went wrong.");
       }
     });
   };
 
-  if (done) {
+  if (done && done !== "approve") {
     return (
       <Card>
         <CardContent className="py-8 text-center">
@@ -51,70 +93,178 @@ export default function ResponseForm({ token }: { token: string }) {
   }
 
   return (
-    <Card>
-      <CardContent className="space-y-4 py-6">
-        <div>
-          <h3 className="font-heading text-lg font-semibold text-foreground">
-            Your response
-          </h3>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Choose one of the options below. Adding a short note helps Cooper Cricket
-            understand your decision.
-          </p>
-        </div>
+    <div className="space-y-4">
+      <Card className="border-warning/40 bg-warning/5">
+        <CardContent className="flex items-start gap-3 py-4">
+          <Checkbox
+            id="under-18"
+            checked={under18}
+            onCheckedChange={(v) => setUnder18(v === true)}
+            className="mt-0.5"
+          />
+          <div className="space-y-1">
+            <Label htmlFor="under-18" className="font-heading text-sm font-semibold">
+              I am under 18 years old
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              If ticked, a parent or guardian must also type their name to co-sign
+              this proposal.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
-        <div className="grid gap-2 sm:grid-cols-3">
-          {(["approve", "request_changes", "decline"] as Choice[]).map((c) => {
-            const Icon = c === "approve" ? Check : c === "decline" ? X : MessageSquare;
-            const colour =
-              c === "approve"
-                ? "bg-success text-success-foreground hover:bg-success/90"
-                : c === "decline"
-                  ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  : "bg-warning text-warning-foreground hover:bg-warning/90";
-            return (
-              <button
-                key={c}
-                onClick={() => setChoice(c)}
-                className={`flex items-center justify-center gap-2 rounded-lg border px-4 py-3 text-sm font-medium transition-all ${
-                  choice === c
-                    ? colour
-                    : "bg-background text-foreground hover:bg-accent"
-                }`}
-              >
-                <Icon className="h-4 w-4" />
-                {labels[c]}
-              </button>
-            );
-          })}
-        </div>
+      <Card>
+        <CardContent className="space-y-4 py-6">
+          <div>
+            <h3 className="font-heading text-lg font-semibold text-foreground">
+              Your response
+            </h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Choose one of the options below.
+            </p>
+          </div>
 
-        {choice && (
-          <div className="space-y-2">
+          <div className="grid gap-2 sm:grid-cols-3">
+            {(["approve", "request_changes", "decline"] as Choice[]).map((c) => {
+              const Icon =
+                c === "approve" ? Check : c === "decline" ? X : MessageSquare;
+              const colour =
+                c === "approve"
+                  ? "bg-success text-success-foreground hover:bg-success/90 border-success"
+                  : c === "decline"
+                    ? "bg-destructive text-destructive-foreground hover:bg-destructive/90 border-destructive"
+                    : "bg-warning text-warning-foreground hover:bg-warning/90 border-warning";
+              return (
+                <button
+                  key={c}
+                  onClick={() => {
+                    setChoice(c);
+                    setError(null);
+                  }}
+                  className={`flex items-center justify-center gap-2 rounded-lg border px-4 py-3 text-sm font-medium transition-all ${
+                    choice === c
+                      ? colour
+                      : "bg-background text-foreground hover:bg-accent"
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  {labels[c]}
+                </button>
+              );
+            })}
+          </div>
+
+          {choice === "approve" && (
+            <div className="space-y-4 rounded-lg border bg-secondary/30 p-4">
+              <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                <Pencil className="h-4 w-4" />
+                Sign your name
+              </div>
+
+              <SignatureField
+                id="player-signature"
+                label="Your full legal name"
+                value={signedName}
+                onChange={setSignedName}
+              />
+
+              {under18 && (
+                <SignatureField
+                  id="parent-signature"
+                  label="Parent or guardian's full legal name"
+                  value={parentSignedName}
+                  onChange={setParentSignedName}
+                />
+              )}
+
+              <div className="flex items-start gap-2 pt-2">
+                <Checkbox
+                  id="agree"
+                  checked={agree}
+                  onCheckedChange={(v) => setAgree(v === true)}
+                  className="mt-0.5"
+                />
+                <Label htmlFor="agree" className="text-xs leading-relaxed text-foreground">
+                  By typing my name above and clicking <strong>Approve &amp; Sign</strong>,
+                  I agree this serves as my electronic signature
+                  {under18 ? " (and my parent or guardian's signature) " : " "}
+                  and that I am bound by the terms of this sponsorship proposal.
+                </Label>
+              </div>
+            </div>
+          )}
+
+          {choice && choice !== "approve" && (
             <Textarea
               placeholder={
-                choice === "approve"
-                  ? "Optional: anything you'd like to add."
-                  : choice === "decline"
-                    ? "Please share why you're declining."
-                    : "What changes would you like to see?"
+                choice === "decline"
+                  ? "Please share why you're declining."
+                  : "What changes would you like to see?"
               }
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               rows={4}
             />
-            {error && <p className="text-sm text-destructive">{error}</p>}
+          )}
+
+          {error && <p className="text-sm text-destructive">{error}</p>}
+
+          {choice && (
             <div className="flex justify-end gap-2">
-              <Button variant="ghost" onClick={() => setChoice(null)} disabled={isPending}>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setChoice(null);
+                  setError(null);
+                }}
+                disabled={isPending}
+              >
                 Back
               </Button>
               <Button onClick={submit} disabled={isPending}>
-                {isPending ? "Submitting…" : `Submit ${labels[choice].toLowerCase()}`}
+                {isPending ? "Submitting…" : labels[choice]}
               </Button>
             </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function SignatureField({
+  id,
+  label,
+  value,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+      <Input
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Type your name"
+        autoComplete="name"
+      />
+      <div className="rounded-md border border-dashed bg-background px-3 py-4">
+        <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+          Signature preview
+        </p>
+        <p
+          className="mt-1 font-signature text-3xl leading-tight text-foreground"
+          style={{ fontFamily: "var(--font-signature)" }}
+        >
+          {value.trim() || " "}
+        </p>
+      </div>
+    </div>
   );
 }

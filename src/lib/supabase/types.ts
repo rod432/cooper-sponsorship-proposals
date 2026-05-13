@@ -102,23 +102,32 @@ export type Database = {
         Row: {
           id: string
           message: string
+          parent_signed_name: string | null
           proposal_id: string
           responded_at: string
           response_type: string
+          signed_name: string | null
+          under_18: boolean
         }
         Insert: {
           id?: string
           message?: string
+          parent_signed_name?: string | null
           proposal_id: string
           responded_at?: string
           response_type: string
+          signed_name?: string | null
+          under_18?: boolean
         }
         Update: {
           id?: string
           message?: string
+          parent_signed_name?: string | null
           proposal_id?: string
           responded_at?: string
           response_type?: string
+          signed_name?: string | null
+          under_18?: boolean
         }
         Relationships: [
           {
@@ -141,11 +150,15 @@ export type Database = {
           id: string
           items: Json
           notes: string
+          parent_signed_name: string | null
           photo_provisions: boolean
           player_email: string
           player_name: string
           public_token: string
           sent_at: string | null
+          signed_at: string | null
+          signed_name: string | null
+          signed_under_18: boolean
           status: string
           terms: Json
           updated_at: string
@@ -161,11 +174,15 @@ export type Database = {
           id?: string
           items?: Json
           notes?: string
+          parent_signed_name?: string | null
           photo_provisions?: boolean
           player_email?: string
           player_name?: string
           public_token?: string
           sent_at?: string | null
+          signed_at?: string | null
+          signed_name?: string | null
+          signed_under_18?: boolean
           status?: string
           terms?: Json
           updated_at?: string
@@ -181,11 +198,15 @@ export type Database = {
           id?: string
           items?: Json
           notes?: string
+          parent_signed_name?: string | null
           photo_provisions?: boolean
           player_email?: string
           player_name?: string
           public_token?: string
           sent_at?: string | null
+          signed_at?: string | null
+          signed_name?: string | null
+          signed_under_18?: boolean
           status?: string
           terms?: Json
           updated_at?: string

@@ -93,6 +93,57 @@ Next.js scaffold installed `eslint.config.mjs` with the Next.js flat-config pres
 
 Next.js auto-renders `not-found.tsx`. Replaced the source's `useEffect(() => console.error(...))` with a clean message page. The console.error was debugging noise, not user-facing behaviour.
 
+## 16. Magic-link auth + domain restriction
+
+Staff sign in with a Supabase Auth one-time email link. No passwords. Self-signup is allowed but locked to whichever email domain `NEXT_PUBLIC_ALLOWED_EMAIL_DOMAIN` points at (defaults to `coopercricket.com.au`).
+
+- `src/app/login/page.tsx` — public login UI. Posts to a server action that calls `supabase.auth.signInWithOtp`. Rejects emails that don't match the allowed domain *before* requesting the link, and the `/auth/callback` route double-checks after the link is exchanged for a session.
+- `src/app/auth/callback/route.ts` — exchanges either `code` (PKCE) or `token_hash + type` (magic link) for a session, then validates the user's email domain. If it doesn't match, signs the user out and redirects to `/login?error=...`.
+- `src/lib/supabase/middleware.ts` — proxy redirects unauthenticated requests for anything outside `/login`, `/auth/*`, `/p/*` to `/login?next=<original>`.
+- `src/components/app-header.tsx` — popover account menu shows the signed-in email + a Sign out button (server action).
+
+**REQUIRED MANUAL STEP**: Supabase Auth needs the production callback URL on its redirect allowlist. In the Supabase dashboard for project `bpivibtphwnuciaapewd`, go to **Authentication → URL Configuration** and set:
+- **Site URL**: `https://cooper-sponsorship-proposals.vercel.app` (or whatever custom domain you land on)
+- **Redirect URLs**: add `https://cooper-sponsorship-proposals.vercel.app/auth/callback`, and `http://localhost:3000/auth/callback` for local dev. If you switch to a custom domain, add that callback URL too.
+
+Without those entries, magic links will fall back to the default Site URL and the redirect will fail.
+
+**REQUIRED CONFIG**: in **Authentication → Providers → Email**, ensure "Confirm email" is on and "Enable email signups" is on. These are on by default in new projects.
+
+The Supabase default mail server has a 4-emails-per-hour limit. Fine for 1–5 staff but worth knowing.
+
+## 17. Cursive-signature approval (e-sign)
+
+Replaces the plain "Approve" button on `/p/[token]` with a typed-signature flow modelled on DocuSign:
+
+- Player types their full legal name into an input; below, the same name renders in **Great Vibes** (Google Font, loaded via `next/font/google`). Submits both the typed name and the cursive rendering atomically.
+- A prominent "I am under 18" checkbox sits at the very top of the page (before the proposal content). When ticked, the signing form requires a second name field for the parent/guardian. Both signatures are persisted.
+- "I agree to the terms" tick-box is required before the submit button activates.
+- `proposals.signed_name` / `parent_signed_name` / `signed_under_18` / `signed_at` hold the final signed state. `proposal_responses` keeps the same fields per response for the audit trail.
+- Once approved, the page re-renders in a **signed view**: the cursive signature(s) are shown beneath the proposal preview alongside the timestamp, and a **Save as PDF** button calls `window.print()` against a print-friendly stylesheet.
+- Decline / Request-changes flow is unchanged — short note, no signature, status flips to `declined` / `changes_requested`.
+
+**Print lockdown**: before the proposal is approved, `<PrintLock />` adds `body.print-locked`. The CSS at the bottom of `globals.css` hides the entire `<main>` in `@media print` when that class is present and shows a "please review and approve online before printing" message instead. The player physically cannot print or save-as-PDF until they've signed.
+
+**REVIEW for Rod**:
+
+- Typed-name e-signatures are legally enforceable in Australia under the Electronic Transactions Act 1999 / state equivalents for most contracts. Talk to your lawyer if you're putting players on long-term deals with this; you may want a brief consent paragraph above the sign button.
+- I gate the signature on `signedName.length >= 2`. There's no validation that the typed name actually matches the player's real name — that's a UX trust issue, not a technical one.
+- Under-18 starts unchecked. If you'd rather have it default to checked for proposals where the player IS under 18 (set by staff), the migration leaves that easy: just default the new player-side checkbox from `proposals.signed_under_18` (which staff could also set on the proposal record).
+
+## 18. Custom domain via Cloudflare DNS
+
+Rod is setting up the domain in Cloudflare. Recommended path:
+
+1. In **Vercel** → Project Settings → Domains, add the chosen domain (e.g. `proposals.coopercricket.com.au`). Vercel will show the exact DNS record to add — usually a CNAME pointing at `cname.vercel-dns.com`.
+2. In **Cloudflare** DNS, add the record exactly as Vercel asks. **Important**: set the proxy status to **DNS only** (grey cloud), not "Proxied" (orange cloud). Cloudflare's reverse proxy in front of Vercel causes header issues with Next.js streaming and breaks the Supabase auth cookies.
+3. After DNS propagates (usually < 5 min with Cloudflare), Vercel auto-provisions a TLS cert via Let's Encrypt.
+4. Update Vercel env var `NEXT_PUBLIC_SITE_URL` to the new domain (e.g. `https://proposals.coopercricket.com.au`).
+5. Add the new callback URL to Supabase Auth allowlist: `https://proposals.coopercricket.com.au/auth/callback`.
+6. Redeploy (Vercel rebuilds automatically when env vars change, or trigger one manually).
+
+Cloudflare-as-proxy can work with extra config (cf-connecting-ip handling, etc.) but DNS-only avoids every gotcha.
+
 ## 15. Public approval flow — new feature beyond the source
 
 The source's `/proposals` page was a placeholder. Rod asked for two new things: a working proposals list, and the ability to email a proposal to a player who can approve, decline, or request changes.

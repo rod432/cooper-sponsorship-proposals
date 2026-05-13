@@ -4,6 +4,8 @@ import ProposalPreview from "@/components/proposal/proposal-preview";
 import type { ProposalItem } from "@/components/proposal/equipment-catalog-card";
 import type { SelectedTerm } from "@/components/proposal/standard-terms-card";
 import ResponseForm from "./response-form";
+import SignedFooter from "./signed-footer";
+import PrintLock from "./print-lock";
 import { STATUS_BADGE_CLASSES, STATUS_LABELS } from "@/lib/proposal-totals";
 
 export const dynamic = "force-dynamic";
@@ -29,12 +31,15 @@ export default async function PublicProposalPage({
   const clauses = (proposal.clauses as unknown as string[]) ?? [];
 
   const responses = proposal.proposal_responses ?? [];
-  const finalised =
-    proposal.status === "approved" || proposal.status === "declined";
+  const isApproved = proposal.status === "approved";
+  const isDeclined = proposal.status === "declined";
+  const finalised = isApproved || isDeclined;
 
   return (
     <div className="space-y-6">
-      <div className="rounded-lg border bg-card p-4 shadow-sm">
+      {!isApproved && <PrintLock />}
+
+      <div className="rounded-lg border bg-card p-4 shadow-sm print:hidden">
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -68,21 +73,32 @@ export default async function PublicProposalPage({
         notes={proposal.notes}
       />
 
-      {finalised ? (
-        <div className="rounded-lg border bg-card p-6 text-center">
+      {isApproved && (
+        <SignedFooter
+          signedName={proposal.signed_name ?? ""}
+          parentSignedName={proposal.parent_signed_name}
+          signedUnder18={proposal.signed_under_18}
+          signedAt={proposal.signed_at}
+        />
+      )}
+
+      {!finalised && (
+        <ResponseForm token={token} defaultPlayerName={proposal.player_name} />
+      )}
+
+      {isDeclined && (
+        <div className="rounded-lg border bg-card p-6 text-center print:hidden">
           <p className="font-heading text-lg font-semibold text-foreground">
-            This proposal has been {proposal.status === "approved" ? "approved" : "declined"}.
+            This proposal has been declined.
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Need to change something? Contact Cooper Cricket directly.
+            Need to talk it through? Contact Cooper Cricket directly.
           </p>
         </div>
-      ) : (
-        <ResponseForm token={token} />
       )}
 
       {responses.length > 0 && (
-        <div className="rounded-lg border bg-card p-4">
+        <div className="rounded-lg border bg-card p-4 print:hidden">
           <h3 className="mb-3 font-heading text-sm font-semibold uppercase tracking-wider text-muted-foreground">
             Response history
           </h3>

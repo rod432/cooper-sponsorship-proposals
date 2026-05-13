@@ -2,8 +2,15 @@
 
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { FileText, Mail, Save } from "lucide-react";
+import { useTransition } from "react";
+import { FileText, LogOut, Mail, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { signOut } from "@/app/login/actions";
 
 const navItems = [
   { label: "Create", path: "/" },
@@ -25,26 +32,25 @@ declare global {
   }
 }
 
-export default function AppHeader() {
+type Props = {
+  userEmail: string | null;
+};
+
+export default function AppHeader({ userEmail }: Props) {
   const pathname = usePathname();
   const router = useRouter();
   const isCreatePage = pathname === "/";
+  const [isPending, startTransition] = useTransition();
 
-  const handleSave = () => {
-    window.__proposalActions?.save?.();
-  };
+  const initial = userEmail ? userEmail[0].toUpperCase() : "?";
 
-  const handleEmail = () => {
-    window.__proposalActions?.email?.();
-  };
-
-  const handlePdf = () => {
-    window.__proposalActions?.printPdf?.();
-  };
+  const handleSave = () => window.__proposalActions?.save?.();
+  const handleEmail = () => window.__proposalActions?.email?.();
+  const handlePdf = () => window.__proposalActions?.printPdf?.();
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-gradient-to-r from-primary-dark to-primary shadow-md">
-      <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
+    <header className="sticky top-0 z-50 w-full bg-gradient-to-r from-primary-dark to-primary shadow-md print:hidden">
+      <div className="mx-auto flex h-14 max-w-5xl items-center gap-3 px-4">
         <div className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-foreground/20 p-1">
             <Image
@@ -56,12 +62,12 @@ export default function AppHeader() {
               priority
             />
           </div>
-          <span className="font-heading text-lg font-semibold text-primary-foreground">
+          <span className="hidden font-heading text-lg font-semibold text-primary-foreground sm:inline">
             Cooper Cricket
           </span>
         </div>
 
-        <nav className="flex items-center gap-1">
+        <nav className="flex flex-1 items-center justify-center gap-1">
           {navItems.map((item) => {
             const isActive = pathname === item.path;
             return (
@@ -80,39 +86,75 @@ export default function AppHeader() {
           })}
         </nav>
 
-        <div className="flex items-center gap-2">
-          {isCreatePage ? (
+        <div className="flex items-center gap-1">
+          {isCreatePage && (
             <>
               <Button
                 variant="ghost"
                 size="sm"
                 className="text-primary-foreground/80 hover:bg-primary-foreground/10 hover:text-primary-foreground"
                 onClick={handlePdf}
+                title="Open Print PDF tab"
               >
-                <FileText className="mr-1.5 h-4 w-4" />
-                PDF
+                <FileText className="h-4 w-4 sm:mr-1.5" />
+                <span className="hidden sm:inline">PDF</span>
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
                 className="text-primary-foreground/80 hover:bg-primary-foreground/10 hover:text-primary-foreground"
                 onClick={handleEmail}
+                title="Send to player"
               >
-                <Mail className="mr-1.5 h-4 w-4" />
-                Send
+                <Mail className="h-4 w-4 sm:mr-1.5" />
+                <span className="hidden sm:inline">Send</span>
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
                 className="text-primary-foreground/80 hover:bg-primary-foreground/10 hover:text-primary-foreground"
                 onClick={handleSave}
+                title="Save proposal"
               >
-                <Save className="mr-1.5 h-4 w-4" />
-                Save
+                <Save className="h-4 w-4 sm:mr-1.5" />
+                <span className="hidden sm:inline">Save</span>
               </Button>
             </>
-          ) : (
-            <div className="w-[180px]" />
+          )}
+
+          {userEmail && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  className="ml-1 flex h-8 w-8 items-center justify-center rounded-full bg-primary-foreground/20 font-heading text-sm font-semibold text-primary-foreground hover:bg-primary-foreground/30"
+                  aria-label="Account menu"
+                >
+                  {initial}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-60">
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                      Signed in as
+                    </p>
+                    <p className="truncate text-sm font-medium text-foreground">
+                      {userEmail}
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    disabled={isPending}
+                    onClick={() => startTransition(() => signOut())}
+                  >
+                    <LogOut className="mr-1.5 h-4 w-4" />
+                    {isPending ? "Signing out…" : "Sign out"}
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
           )}
         </div>
       </div>

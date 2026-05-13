@@ -55,9 +55,16 @@ src/
       terms/page.tsx         — `/terms`       CRUD for the standard terms library
     p/[token]/               — public approval page (minimal layout, no staff nav)
       layout.tsx
-      page.tsx               — read-only proposal + response history
-      response-form.tsx      — Approve / Decline / Request changes form
+      page.tsx               — read-only proposal + signed view + history
+      response-form.tsx      — Approve (with cursive signature) / Decline / Request changes
+      signed-footer.tsx      — visible only after approval: signature(s) + "Save as PDF"
+      print-lock.tsx         — blocks browser print until the proposal is signed
       actions.ts             — `submitResponse` server action
+    login/                   — staff magic-link login
+      page.tsx
+      login-form.tsx
+      actions.ts             — requestMagicLink + signOut server actions
+    auth/callback/route.ts   — exchanges magic-link code, enforces allowed email domain
   components/
     app-header.tsx           — sticky header w/ logo, nav, save/PDF/email shortcuts
     providers.tsx            — React Query + Tooltip + Toaster providers
@@ -129,7 +136,17 @@ Set env vars in **Vercel Project Settings → Environment Variables** for Produc
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` (required)
 - `RESEND_API_KEY` (optional) — when set, the Send-to-Player button sends server-side via Resend instead of opening the staff member's mail client.
 - `RESEND_FROM_ADDRESS` (optional) — defaults to `Cooper Cricket <proposals@coopercricket.com.au>`. The sending domain must be verified in Resend.
-- `NEXT_PUBLIC_SITE_URL` (optional) — overrides the auto-detected base URL used in proposal links. Set this if you put the app behind a custom domain.
+- `NEXT_PUBLIC_SITE_URL` (optional) — overrides the auto-detected base URL used in proposal links and magic-link redirects. Set this if you put the app behind a custom domain.
+- `NEXT_PUBLIC_ALLOWED_EMAIL_DOMAIN` (optional) — which email domain is allowed to sign in. Defaults to `coopercricket.com.au`.
+
+### Supabase Auth URL allowlist (one-time setup)
+
+In the Supabase dashboard for the project, go to **Authentication → URL Configuration** and add:
+
+- Site URL: the production app URL (e.g. `https://cooper-sponsorship-proposals.vercel.app`)
+- Redirect URLs: `<site>/auth/callback` for every environment you sign in from (production, custom domain, and `http://localhost:3000/auth/callback` for local dev)
+
+Magic links won't work without these entries.
 
 Push to `main` triggers a production deploy via the GitHub integration.
 
