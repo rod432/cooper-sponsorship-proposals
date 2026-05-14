@@ -71,6 +71,11 @@ export default async function PublicProposalPage({
         selectedTerms={selectedTerms}
         customTerms={[]}
         notes={proposal.notes}
+        reference={proposal.reference}
+        preparedByName={proposal.prepared_by_name}
+        preparedByEmail={proposal.prepared_by_email}
+        sentAt={proposal.sent_at}
+        signedAt={proposal.signed_at}
       />
 
       {isApproved && (

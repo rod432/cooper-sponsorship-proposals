@@ -4,28 +4,33 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: 210 40% 98%;
-  --foreground: 222 84% 5%;
+  /* Cooper Cricket brand palette (Style Guide, Aug 2022)
+     - Light Blue  #00B3DC  Pantone 306PC   →  HSL(191, 100%, 43%)
+     - Grey        #575B62  Pantone 425PC   →  HSL(218,   6%, 36%)
+     - White       #FEFEFE                  →  base canvas
+  */
+  --background: 0 0% 100%;
+  --foreground: 218 12% 18%;
 
   --card: 0 0% 100%;
-  --card-foreground: 222 84% 5%;
+  --card-foreground: 218 12% 18%;
 
   --popover: 0 0% 100%;
-  --popover-foreground: 222 84% 5%;
+  --popover-foreground: 218 12% 18%;
 
-  --primary: 187 91% 37%;
+  --primary: 191 100% 43%;
   --primary-foreground: 0 0% 100%;
-  --primary-dark: 189 87% 32%;
-  --primary-light: 186 100% 96%;
+  --primary-dark: 192 100% 35%;
+  --primary-light: 191 100% 96%;
 
-  --secondary: 210 40% 96%;
-  --secondary-foreground: 222 47% 11%;
+  --secondary: 218 12% 95%;
+  --secondary-foreground: 218 12% 18%;
 
-  --muted: 215 16% 47%;
-  --muted-foreground: 215 16% 47%;
+  --muted: 218 8% 45%;
+  --muted-foreground: 218 8% 45%;
 
-  --accent: 186 100% 96%;
-  --accent-foreground: 187 91% 37%;
+  --accent: 191 100% 96%;
+  --accent-foreground: 191 100% 35%;
 
   --destructive: 343 81% 53%;
   --destructive-foreground: 0 0% 100%;
@@ -36,9 +41,9 @@
   --warning: 32 95% 44%;
   --warning-foreground: 0 0% 100%;
 
-  --border: 214 32% 91%;
-  --input: 214 32% 91%;
-  --ring: 187 91% 37%;
+  --border: 218 12% 90%;
+  --input: 218 12% 90%;
+  --ring: 191 100% 43%;
 
   --radius: 0.75rem;
 
@@ -54,8 +59,8 @@
   --font-heading: var(--font-outfit), "Outfit", sans-serif;
   --font-body: system-ui, -apple-system, sans-serif;
 
-  --gradient-primary: linear-gradient(135deg, hsl(187, 91%, 37%), hsl(189, 87%, 32%));
-  --gradient-header: linear-gradient(135deg, hsl(189, 87%, 32%), hsl(187, 91%, 37%));
+  --gradient-primary: linear-gradient(135deg, hsl(191, 100%, 43%), hsl(192, 100%, 35%));
+  --gradient-header: linear-gradient(135deg, hsl(192, 100%, 35%), hsl(191, 100%, 43%));
   --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.06);
   --shadow-card-hover: 0 4px 12px -2px rgba(0, 0, 0, 0.08);
 }

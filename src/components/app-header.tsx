@@ -51,20 +51,15 @@ export default function AppHeader({ userEmail }: Props) {
   return (
     <header className="sticky top-0 z-50 w-full bg-gradient-to-r from-primary-dark to-primary shadow-md print:hidden">
       <div className="mx-auto flex h-14 max-w-5xl items-center gap-3 px-4">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-foreground/20 p-1">
-            <Image
-              src="/cooper-c-logo.png"
-              alt="Cooper Cricket"
-              width={32}
-              height={32}
-              className="h-full w-full object-contain"
-              priority
-            />
-          </div>
-          <span className="hidden font-heading text-lg font-semibold text-primary-foreground sm:inline">
-            Cooper Cricket
-          </span>
+        <div className="flex items-center">
+          <Image
+            src="/cooper-cricket-wordmark-white.svg"
+            alt="Cooper Cricket"
+            width={140}
+            height={42}
+            className="h-8 w-auto"
+            priority
+          />
         </div>
 
         <nav className="flex flex-1 items-center justify-center gap-1">

@@ -37,6 +37,12 @@ interface ProposalState {
   selectedTerms: SelectedTerm[];
   customTerms: string[];
   notes: string;
+  // Read-only metadata loaded from the DB once the proposal exists.
+  reference: string;
+  preparedByName: string;
+  preparedByEmail: string;
+  sentAt: string | null;
+  signedAt: string | null;
 }
 
 const defaultState: ProposalState = {
@@ -52,6 +58,11 @@ const defaultState: ProposalState = {
   selectedTerms: [],
   customTerms: [],
   notes: "",
+  reference: "",
+  preparedByName: "",
+  preparedByEmail: "",
+  sentAt: null,
+  signedAt: null,
 };
 
 export default function CreateProposalView() {
@@ -91,6 +102,11 @@ export default function CreateProposalView() {
         selectedTerms: (data.terms as unknown as SelectedTerm[]) ?? [],
         customTerms: [],
         notes: data.notes,
+        reference: data.reference,
+        preparedByName: data.prepared_by_name,
+        preparedByEmail: data.prepared_by_email,
+        sentAt: data.sent_at,
+        signedAt: data.signed_at,
       });
       setPersistedId(data.id);
       setLoaded(true);
@@ -107,6 +123,15 @@ export default function CreateProposalView() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
+      // Pull the signed-in user so we can attribute the proposal to them.
+      const { data: userData } = await supabase.auth.getUser();
+      const user = userData.user;
+      const preparedByEmail = user?.email ?? "";
+      const preparedByName =
+        (user?.user_metadata?.full_name as string | undefined) ||
+        (user?.user_metadata?.name as string | undefined) ||
+        (preparedByEmail ? preparedByEmail.split("@")[0] : "");
+
       const payload = {
         player_name: state.playerName,
         player_email: state.playerEmail,
@@ -124,19 +149,33 @@ export default function CreateProposalView() {
       if (persistedId) {
         const { data: current } = await supabase
           .from("proposals")
-          .select("version")
+          .select("version, prepared_by_name, prepared_by_email")
           .eq("id", persistedId)
           .single();
+        // Only set prepared_by on first save (don't overwrite if another staff
+        // member opens an existing proposal to make changes).
+        const preparedByPatch =
+          current?.prepared_by_email
+            ? {}
+            : { prepared_by_name: preparedByName, prepared_by_email: preparedByEmail };
         const { error } = await supabase
           .from("proposals")
-          .update({ ...payload, version: (current?.version ?? 1) + 1 })
+          .update({
+            ...payload,
+            ...preparedByPatch,
+            version: (current?.version ?? 1) + 1,
+          })
           .eq("id", persistedId);
         if (error) throw error;
         return persistedId;
       } else {
         const { data, error } = await supabase
           .from("proposals")
-          .insert(payload)
+          .insert({
+            ...payload,
+            prepared_by_name: preparedByName,
+            prepared_by_email: preparedByEmail,
+          })
           .select("id")
           .single();
         if (error) throw error;

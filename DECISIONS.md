@@ -131,6 +131,47 @@ Replaces the plain "Approve" button on `/p/[token]` with a typed-signature flow 
 - I gate the signature on `signedName.length >= 2`. There's no validation that the typed name actually matches the player's real name — that's a UX trust issue, not a technical one.
 - Under-18 starts unchecked. If you'd rather have it default to checked for proposals where the player IS under 18 (set by staff), the migration leaves that easy: just default the new player-side checkbox from `proposals.signed_under_18` (which staff could also set on the proposal record).
 
+## 19. Brand-accurate visual identity + letterhead
+
+Aligned every visual to the official Cooper Cricket style guide (Aug 2022) and added a proper letterhead to the proposal document.
+
+**Brand colours** — updated from my eyeballed approximation to the exact spec:
+
+- Primary: `#00B3DC` (HSL 191 100% 43%) — Pantone 306PC. Was `#0a7fa6`-ish. Brighter and more saturated than before.
+- Primary-dark: `#009BBF` (HSL 192 100% 35%) for the gradient end.
+- Grey: `#575B62` (HSL 218 6% 36%) — Pantone 425PC. Drives all the "muted text" cases.
+
+**Logos** — copied the official SVG wordmarks from the Dropbox brand-assets folder to `public/`:
+
+- `cooper-cricket-wordmark-white.svg` — used on the staff header, public proposal header, login brand panel, and the proposal letterhead band.
+- `cooper-cricket-wordmark-blue.svg` — used on the mobile login fallback (white background).
+- `cooper-cricket-wordmark-black.svg` — kept as a backup for any future print/B&W needs.
+- The "C" mark (`cooper-c-logo.png`) is now a watermark on the login brand panel.
+
+**Letterhead** (`ProposalPreview`) — full restyle:
+
+- Blue gradient header band with the white wordmark, "Sponsorship Proposal" label, reference number (e.g. `CC-2026-0007`), and date.
+- Sub-header strip with legal name, ABN, address, phone, email pulled from `src/lib/company-info.ts`.
+- "Prepared for / Prepared by" two-column block: player name + sponsorship term on the left, staff member's name + email on the right.
+- Equipment table with alternating row tints, sticky column widths, brand-coloured headers.
+- "Total Sponsorship Value" gets its own filled-blue row so it's the visual anchor.
+- Standard-terms section auto-numbers with blue numerals.
+- Footer repeats legal name + ABN + contact info, with the validity caveat.
+
+**Auto-generated proposal reference** — every proposal gets a human-friendly ID at insert time via a Postgres trigger. Format: `CC-YYYY-NNNN`. Backed by a sequence so re-running the migration is idempotent. Shown on the proposals list, in the email, and on the letterhead.
+
+**Prepared-by attribution** — `prepared_by_name` + `prepared_by_email` columns on `proposals`. Auto-filled on first save from the signed-in user's metadata (`user_metadata.full_name` → falls back to email-local-part). Not overwritten if another staff member edits a proposal that was originally drafted by someone else, so attribution sticks.
+
+**Branded email body** — when Resend is configured, the player gets a properly designed HTML email: Cooper-blue header band, large "Review your proposal" CTA, business footer. Text fallback included. Subject includes the reference number when available.
+
+**Login page** — split-panel layout. Left side is a Cooper-blue brand panel with the wordmark, a large "C" watermark, and a tagline. Right side is the sign-in form on white. Collapses to a single column on mobile.
+
+**REVIEW for Rod**:
+
+- Resend's "from" address (`proposals@coopercricket.com.au`) still needs DNS/SPF/DKIM set up on that domain before Resend will deliver. Once it's verified you can also drop `RESEND_FROM_ADDRESS` if you want — the default in `COMPANY` config matches.
+- If you want a different display name on the wordmark in the staff header (you've got a lot of horizontal space), I can swap to the bigger version or add a tagline.
+- Proposal references start at `CC-2026-0001`. If you want them to continue from a number you've used externally, change the sequence's starting value in Supabase: `SELECT setval('public.proposal_reference_seq', 99);` → next will be 100.
+
 ## 18. Custom domain via Cloudflare DNS
 
 Rod is setting up the domain in Cloudflare. Recommended path:

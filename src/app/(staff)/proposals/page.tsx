@@ -176,7 +176,7 @@ export default function ProposalsPage() {
               <Card key={p.id}>
                 <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center">
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <h3 className="truncate font-heading font-semibold text-foreground">
                         {p.player_name || "Unnamed proposal"}
                       </h3>
@@ -187,6 +187,11 @@ export default function ProposalsPage() {
                       >
                         {STATUS_LABELS[p.status] ?? p.status}
                       </span>
+                      {p.reference && (
+                        <span className="font-mono text-[11px] text-muted-foreground">
+                          {p.reference}
+                        </span>
+                      )}
                     </div>
                     <p className="mt-1 text-sm text-muted-foreground">
                       {p.deal_duration || "No duration set"} ·{" "}

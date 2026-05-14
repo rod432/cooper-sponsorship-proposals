@@ -154,7 +154,10 @@ export type Database = {
           photo_provisions: boolean
           player_email: string
           player_name: string
+          prepared_by_email: string
+          prepared_by_name: string
           public_token: string
+          reference: string
           sent_at: string | null
           signed_at: string | null
           signed_name: string | null
@@ -178,7 +181,10 @@ export type Database = {
           photo_provisions?: boolean
           player_email?: string
           player_name?: string
+          prepared_by_email?: string
+          prepared_by_name?: string
           public_token?: string
+          reference?: string
           sent_at?: string | null
           signed_at?: string | null
           signed_name?: string | null
@@ -202,7 +208,10 @@ export type Database = {
           photo_provisions?: boolean
           player_email?: string
           player_name?: string
+          prepared_by_email?: string
+          prepared_by_name?: string
           public_token?: string
+          reference?: string
           sent_at?: string | null
           signed_at?: string | null
           signed_name?: string | null
