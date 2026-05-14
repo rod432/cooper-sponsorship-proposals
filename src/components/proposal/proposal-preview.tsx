@@ -19,6 +19,9 @@ interface ProposalPreviewProps {
   reference?: string;
   preparedByName?: string;
   preparedByEmail?: string;
+  preparedByRole?: string;
+  preparedByPhone?: string;
+  isUnder18?: boolean;
   sentAt?: string | null;
   signedAt?: string | null;
 }
@@ -45,6 +48,9 @@ const ProposalPreview = (props: ProposalPreviewProps) => {
     reference,
     preparedByName,
     preparedByEmail,
+    preparedByRole,
+    preparedByPhone,
+    isUnder18,
     sentAt,
     signedAt,
   } = props;
@@ -119,7 +125,8 @@ const ProposalPreview = (props: ProposalPreviewProps) => {
               {playerName || "—"}
             </p>
             <p className="mt-0.5 text-sm text-muted-foreground">
-              Sponsorship term: {dealDuration || "—"}
+              {isUnder18 ? "Youth player (under 18)" : "Adult player"} ·{" "}
+              {dealDuration || "—"} sponsorship term
             </p>
           </div>
           <div>
@@ -129,8 +136,14 @@ const ProposalPreview = (props: ProposalPreviewProps) => {
             <p className="mt-1 font-heading text-lg font-semibold text-foreground">
               {preparedByName || COMPANY.tradingName}
             </p>
+            {preparedByRole && (
+              <p className="text-sm text-foreground">{preparedByRole}</p>
+            )}
             {preparedByEmail && (
               <p className="mt-0.5 text-sm text-muted-foreground">{preparedByEmail}</p>
+            )}
+            {preparedByPhone && (
+              <p className="text-sm text-muted-foreground">{preparedByPhone}</p>
             )}
           </div>
         </div>

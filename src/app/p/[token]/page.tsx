@@ -74,6 +74,9 @@ export default async function PublicProposalPage({
         reference={proposal.reference}
         preparedByName={proposal.prepared_by_name}
         preparedByEmail={proposal.prepared_by_email}
+        preparedByRole={proposal.prepared_by_role}
+        preparedByPhone={proposal.prepared_by_phone}
+        isUnder18={proposal.signed_under_18}
         sentAt={proposal.sent_at}
         signedAt={proposal.signed_at}
       />

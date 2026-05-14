@@ -3,7 +3,8 @@
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useTransition } from "react";
-import { FileText, LogOut, Mail, Save } from "lucide-react";
+import { FileText, LogOut, Mail, Save, User } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -137,6 +138,12 @@ export default function AppHeader({ userEmail }: Props) {
                       {userEmail}
                     </p>
                   </div>
+                  <Button asChild variant="outline" size="sm" className="w-full">
+                    <Link href="/profile">
+                      <User className="mr-1.5 h-4 w-4" />
+                      Your profile
+                    </Link>
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"

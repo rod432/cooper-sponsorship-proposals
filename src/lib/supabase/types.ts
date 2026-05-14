@@ -156,6 +156,8 @@ export type Database = {
           player_name: string
           prepared_by_email: string
           prepared_by_name: string
+          prepared_by_phone: string
+          prepared_by_role: string
           public_token: string
           reference: string
           sent_at: string | null
@@ -183,6 +185,8 @@ export type Database = {
           player_name?: string
           prepared_by_email?: string
           prepared_by_name?: string
+          prepared_by_phone?: string
+          prepared_by_role?: string
           public_token?: string
           reference?: string
           sent_at?: string | null
@@ -210,6 +214,8 @@ export type Database = {
           player_name?: string
           prepared_by_email?: string
           prepared_by_name?: string
+          prepared_by_phone?: string
+          prepared_by_role?: string
           public_token?: string
           reference?: string
           sent_at?: string | null

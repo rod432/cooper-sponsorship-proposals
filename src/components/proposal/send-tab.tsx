@@ -40,6 +40,8 @@ interface Props {
   notes: string;
   preparedByName: string;
   preparedByEmail: string;
+  preparedByRole: string;
+  preparedByPhone: string;
 }
 
 export default function SendTab(props: Props) {
@@ -231,6 +233,9 @@ export default function SendTab(props: Props) {
         reference={props.reference}
         preparedByName={props.preparedByName}
         preparedByEmail={props.preparedByEmail}
+        preparedByRole={props.preparedByRole}
+        preparedByPhone={props.preparedByPhone}
+        isUnder18={props.signedUnder18}
         sentAt={props.sentAt}
         signedAt={props.signedAt}
       />

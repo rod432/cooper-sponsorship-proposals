@@ -3,7 +3,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -32,39 +31,57 @@ const PlayerDetailsCard = ({
       <CardTitle className="text-lg">Player Details</CardTitle>
     </CardHeader>
     <CardContent className="space-y-4">
-      {/* Under-18 status comes first so it's a deliberate decision at the
-          start of the proposal. Drives the signing flow on the player side. */}
-      <div className="flex items-start gap-3 rounded-lg border border-warning/40 bg-warning/5 px-3 py-2.5">
-        <Checkbox
-          id="is-under-18"
-          checked={isUnder18}
-          onCheckedChange={(v) => onChange("isUnder18", v === true)}
-          className="mt-0.5"
-        />
-        <div>
-          <Label htmlFor="is-under-18" className="font-heading text-sm font-semibold">
-            Player is under 18
-          </Label>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="player-name">Player Name</Label>
+          <Input
+            id="player-name"
+            placeholder="e.g. Sam Smith"
+            value={playerName}
+            onChange={(e) => onChange("playerName", e.target.value)}
+            autoComplete="off"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="player-category">Age Category</Label>
+          <Select
+            value={isUnder18 ? "youth" : "adult"}
+            onValueChange={(v) => onChange("isUnder18", v === "youth")}
+          >
+            <SelectTrigger id="player-category">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="adult">Adult (18+)</SelectItem>
+              <SelectItem value="youth">Youth (under 18)</SelectItem>
+            </SelectContent>
+          </Select>
           <p className="text-xs text-muted-foreground">
-            Tick if the player is a minor. The agreement will require a parent or
-            guardian to also sign.
+            {isUnder18
+              ? "A parent or guardian will also need to sign the agreement."
+              : "Player will sign the agreement on their own."}
           </p>
         </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label>Player Name</Label>
+          <Label htmlFor="player-email">Player Email</Label>
           <Input
-            placeholder="Enter player name"
-            value={playerName}
-            onChange={(e) => onChange("playerName", e.target.value)}
+            id="player-email"
+            type="email"
+            placeholder="player@example.com"
+            value={playerEmail}
+            onChange={(e) => onChange("playerEmail", e.target.value)}
+            autoComplete="off"
           />
         </div>
+
         <div className="space-y-2">
-          <Label>Deal Duration</Label>
+          <Label htmlFor="deal-duration">Sponsorship Term</Label>
           <Select value={dealDuration} onValueChange={(v) => onChange("dealDuration", v)}>
-            <SelectTrigger>
+            <SelectTrigger id="deal-duration">
               <SelectValue placeholder="Select duration" />
             </SelectTrigger>
             <SelectContent>
@@ -76,16 +93,6 @@ const PlayerDetailsCard = ({
             </SelectContent>
           </Select>
         </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label>Player Email</Label>
-        <Input
-          type="email"
-          placeholder="player@example.com — used when sending the proposal"
-          value={playerEmail}
-          onChange={(e) => onChange("playerEmail", e.target.value)}
-        />
       </div>
     </CardContent>
   </Card>

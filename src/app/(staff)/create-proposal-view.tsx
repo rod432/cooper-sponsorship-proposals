@@ -45,6 +45,8 @@ interface ProposalState {
   reference: string;
   preparedByName: string;
   preparedByEmail: string;
+  preparedByRole: string;
+  preparedByPhone: string;
   sentAt: string | null;
   signedAt: string | null;
   signedName: string | null;
@@ -70,6 +72,8 @@ const defaultState: ProposalState = {
   reference: "",
   preparedByName: "",
   preparedByEmail: "",
+  preparedByRole: "",
+  preparedByPhone: "",
   sentAt: null,
   signedAt: null,
   signedName: null,
@@ -119,6 +123,8 @@ export default function CreateProposalView() {
         reference: data.reference,
         preparedByName: data.prepared_by_name,
         preparedByEmail: data.prepared_by_email,
+        preparedByRole: data.prepared_by_role,
+        preparedByPhone: data.prepared_by_phone,
         sentAt: data.sent_at,
         signedAt: data.signed_at,
         signedName: data.signed_name,
@@ -144,11 +150,19 @@ export default function CreateProposalView() {
       // Pull the signed-in user so we can attribute the proposal to them.
       const { data: userData } = await supabase.auth.getUser();
       const user = userData.user;
+      const metadata = (user?.user_metadata ?? {}) as {
+        full_name?: string;
+        name?: string;
+        role?: string;
+        phone?: string;
+      };
       const preparedByEmail = user?.email ?? "";
       const preparedByName =
-        (user?.user_metadata?.full_name as string | undefined) ||
-        (user?.user_metadata?.name as string | undefined) ||
+        metadata.full_name ||
+        metadata.name ||
         (preparedByEmail ? preparedByEmail.split("@")[0] : "");
+      const preparedByRole = metadata.role ?? "";
+      const preparedByPhone = metadata.phone ?? "";
 
       const payload = {
         player_name: state.playerName,
@@ -176,7 +190,12 @@ export default function CreateProposalView() {
         const preparedByPatch =
           current?.prepared_by_email
             ? {}
-            : { prepared_by_name: preparedByName, prepared_by_email: preparedByEmail };
+            : {
+                prepared_by_name: preparedByName,
+                prepared_by_email: preparedByEmail,
+                prepared_by_role: preparedByRole,
+                prepared_by_phone: preparedByPhone,
+              };
         const { error } = await supabase
           .from("proposals")
           .update({
@@ -194,6 +213,8 @@ export default function CreateProposalView() {
             ...payload,
             prepared_by_name: preparedByName,
             prepared_by_email: preparedByEmail,
+            prepared_by_role: preparedByRole,
+            prepared_by_phone: preparedByPhone,
           })
           .select("id")
           .single();
@@ -360,6 +381,9 @@ export default function CreateProposalView() {
           reference={state.reference}
           preparedByName={state.preparedByName}
           preparedByEmail={state.preparedByEmail}
+          preparedByRole={state.preparedByRole}
+          preparedByPhone={state.preparedByPhone}
+          isUnder18={state.isUnder18}
           sentAt={state.sentAt}
           signedAt={state.signedAt}
         />
@@ -390,6 +414,8 @@ export default function CreateProposalView() {
           notes={state.notes}
           preparedByName={state.preparedByName}
           preparedByEmail={state.preparedByEmail}
+          preparedByRole={state.preparedByRole}
+          preparedByPhone={state.preparedByPhone}
         />
       )}
 
