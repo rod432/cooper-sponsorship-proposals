@@ -5,7 +5,7 @@ interface TabSwitcherProps {
   onTabChange: (tab: string) => void;
 }
 
-const tabs = ["Edit", "Preview", "Print PDF"];
+const tabs = ["Edit", "Preview", "Send"];
 
 const TabSwitcher = ({ activeTab, onTabChange }: TabSwitcherProps) => (
   <div className="inline-flex rounded-lg bg-muted p-1">

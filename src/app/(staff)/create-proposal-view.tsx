@@ -20,14 +20,18 @@ import StandardTermsCard, {
 import CustomTermsCard from "@/components/proposal/custom-terms-card";
 import NotesCard from "@/components/proposal/notes-card";
 import ProposalPreview from "@/components/proposal/proposal-preview";
-import ProposalPrintView from "@/components/proposal/proposal-print-view";
+import SendTab from "@/components/proposal/send-tab";
 import SendProposalDialog from "@/components/proposal/send-proposal-dialog";
+import { Button } from "@/components/ui/button";
+import { Eye, Mail, Save } from "lucide-react";
+import { STATUS_BADGE_CLASSES, STATUS_LABELS } from "@/lib/proposal-totals";
 import type { Json } from "@/lib/supabase/types";
 
 interface ProposalState {
   playerName: string;
   playerEmail: string;
   dealDuration: string;
+  isUnder18: boolean;
   items: ProposalItem[];
   discountPercent: number;
   cashIncentive: number;
@@ -43,12 +47,17 @@ interface ProposalState {
   preparedByEmail: string;
   sentAt: string | null;
   signedAt: string | null;
+  signedName: string | null;
+  parentSignedName: string | null;
+  publicToken: string | null;
+  status: string;
 }
 
 const defaultState: ProposalState = {
   playerName: "",
   playerEmail: "",
   dealDuration: "",
+  isUnder18: false,
   items: [],
   discountPercent: 0,
   cashIncentive: 0,
@@ -63,6 +72,10 @@ const defaultState: ProposalState = {
   preparedByEmail: "",
   sentAt: null,
   signedAt: null,
+  signedName: null,
+  parentSignedName: null,
+  publicToken: null,
+  status: "draft",
 };
 
 export default function CreateProposalView() {
@@ -90,6 +103,7 @@ export default function CreateProposalView() {
         playerName: data.player_name,
         playerEmail: data.player_email,
         dealDuration: data.deal_duration,
+        isUnder18: data.signed_under_18,
         items: (data.items as unknown as ProposalItem[]).map((item) => ({
           ...item,
           id: item.id || crypto.randomUUID(),
@@ -107,6 +121,10 @@ export default function CreateProposalView() {
         preparedByEmail: data.prepared_by_email,
         sentAt: data.sent_at,
         signedAt: data.signed_at,
+        signedName: data.signed_name,
+        parentSignedName: data.parent_signed_name,
+        publicToken: data.public_token,
+        status: data.status,
       });
       setPersistedId(data.id);
       setLoaded(true);
@@ -136,6 +154,7 @@ export default function CreateProposalView() {
         player_name: state.playerName,
         player_email: state.playerEmail,
         deal_duration: state.dealDuration,
+        signed_under_18: state.isUnder18,
         items: state.items as unknown as Json,
         discount_percent: state.discountPercent,
         cash_incentive: state.cashIncentive,
@@ -215,7 +234,7 @@ export default function CreateProposalView() {
     window.__proposalActions = {
       save: () => saveMutation.mutate(),
       email: handleSend,
-      printPdf: () => setActiveTab("Print PDF"),
+      printPdf: () => setActiveTab("Send"),
       isSaving: saveMutation.isPending,
     };
     return () => {
@@ -226,10 +245,28 @@ export default function CreateProposalView() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="font-heading text-2xl font-bold text-foreground">
-          {persistedId ? "Edit Proposal" : "Create Proposal"}
-        </h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="font-heading text-2xl font-bold text-foreground">
+            {persistedId ? "Edit Proposal" : "Create Proposal"}
+          </h1>
+          {persistedId && (state.reference || state.status !== "draft") && (
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
+              {state.reference && (
+                <span className="font-mono text-muted-foreground">
+                  {state.reference}
+                </span>
+              )}
+              <span
+                className={`rounded-full px-2 py-0.5 font-medium ${
+                  STATUS_BADGE_CLASSES[state.status] ?? "bg-muted text-muted-foreground"
+                }`}
+              >
+                {STATUS_LABELS[state.status] ?? state.status}
+              </span>
+            </div>
+          )}
+        </div>
         <TabSwitcher activeTab={activeTab} onTabChange={setActiveTab} />
       </div>
 
@@ -239,6 +276,7 @@ export default function CreateProposalView() {
             playerName={state.playerName}
             playerEmail={state.playerEmail}
             dealDuration={state.dealDuration}
+            isUnder18={state.isUnder18}
             onChange={(f, v) =>
               update(f as keyof ProposalState, v as ProposalState[keyof ProposalState])
             }
@@ -276,12 +314,84 @@ export default function CreateProposalView() {
             onChange={(t) => update("customTerms", t)}
           />
           <NotesCard notes={state.notes} onChange={(n) => update("notes", n)} />
+
+          {/* Action bar — explicit Save / Preview / Send buttons close to the form */}
+          <div className="sticky bottom-0 -mx-4 mt-6 flex flex-col-reverse gap-2 border-t bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-muted-foreground">
+              {persistedId
+                ? "Changes save back to the same proposal."
+                : "Save to come back to this later, or send straight to the player."}
+            </p>
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => saveMutation.mutate()}
+                disabled={saveMutation.isPending}
+              >
+                <Save className="mr-1.5 h-4 w-4" />
+                {saveMutation.isPending ? "Saving…" : "Save"}
+              </Button>
+              <Button variant="outline" onClick={() => setActiveTab("Preview")}>
+                <Eye className="mr-1.5 h-4 w-4" />
+                Preview
+              </Button>
+              <Button onClick={handleSend} disabled={!state.playerEmail.trim()}>
+                <Mail className="mr-1.5 h-4 w-4" />
+                Send to player
+              </Button>
+            </div>
+          </div>
         </div>
       )}
 
-      {activeTab === "Preview" && <ProposalPreview {...state} />}
+      {activeTab === "Preview" && (
+        <ProposalPreview
+          playerName={state.playerName}
+          dealDuration={state.dealDuration}
+          items={state.items}
+          discountPercent={state.discountPercent}
+          cashIncentive={state.cashIncentive}
+          clauses={state.clauses}
+          aiImageRights={state.aiImageRights}
+          photoProvisions={state.photoProvisions}
+          selectedTerms={state.selectedTerms}
+          customTerms={state.customTerms}
+          notes={state.notes}
+          reference={state.reference}
+          preparedByName={state.preparedByName}
+          preparedByEmail={state.preparedByEmail}
+          sentAt={state.sentAt}
+          signedAt={state.signedAt}
+        />
+      )}
 
-      {activeTab === "Print PDF" && <ProposalPrintView {...state} />}
+      {activeTab === "Send" && (
+        <SendTab
+          proposalId={persistedId}
+          reference={state.reference}
+          status={state.status}
+          publicToken={state.publicToken}
+          sentAt={state.sentAt}
+          signedAt={state.signedAt}
+          signedName={state.signedName}
+          parentSignedName={state.parentSignedName}
+          signedUnder18={state.isUnder18}
+          playerEmail={state.playerEmail}
+          playerName={state.playerName}
+          dealDuration={state.dealDuration}
+          items={state.items}
+          discountPercent={state.discountPercent}
+          cashIncentive={state.cashIncentive}
+          clauses={state.clauses}
+          aiImageRights={state.aiImageRights}
+          photoProvisions={state.photoProvisions}
+          selectedTerms={state.selectedTerms}
+          customTerms={state.customTerms}
+          notes={state.notes}
+          preparedByName={state.preparedByName}
+          preparedByEmail={state.preparedByEmail}
+        />
+      )}
 
       <SendProposalDialog
         open={sendOpen}

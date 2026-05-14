@@ -21,10 +21,16 @@ const labels: Record<Choice, string> = {
 type Props = {
   token: string;
   defaultPlayerName?: string;
+  /** Staff pre-set this player as under 18. Locks the checkbox on. */
+  presetUnder18?: boolean;
 };
 
-export default function ResponseForm({ token, defaultPlayerName = "" }: Props) {
-  const [under18, setUnder18] = useState(false);
+export default function ResponseForm({
+  token,
+  defaultPlayerName = "",
+  presetUnder18 = false,
+}: Props) {
+  const [under18, setUnder18] = useState(presetUnder18);
   const [choice, setChoice] = useState<Choice | null>(null);
   const [message, setMessage] = useState("");
   const [signedName, setSignedName] = useState(defaultPlayerName);
@@ -99,16 +105,20 @@ export default function ResponseForm({ token, defaultPlayerName = "" }: Props) {
           <Checkbox
             id="under-18"
             checked={under18}
+            disabled={presetUnder18}
             onCheckedChange={(v) => setUnder18(v === true)}
             className="mt-0.5"
           />
           <div className="space-y-1">
             <Label htmlFor="under-18" className="font-heading text-sm font-semibold">
-              I am under 18 years old
+              {presetUnder18
+                ? "Player is under 18 — parent or guardian must co-sign"
+                : "I am under 18 years old"}
             </Label>
             <p className="text-xs text-muted-foreground">
-              If ticked, a parent or guardian must also type their name to co-sign
-              this proposal.
+              {presetUnder18
+                ? "Cooper Cricket has marked this proposal as requiring a parent or guardian signature alongside the player's signature."
+                : "If ticked, a parent or guardian must also type their name to co-sign this proposal."}
             </p>
           </div>
         </CardContent>

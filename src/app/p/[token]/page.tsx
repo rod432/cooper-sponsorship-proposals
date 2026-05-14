@@ -88,7 +88,11 @@ export default async function PublicProposalPage({
       )}
 
       {!finalised && (
-        <ResponseForm token={token} defaultPlayerName={proposal.player_name} />
+        <ResponseForm
+          token={token}
+          defaultPlayerName={proposal.player_name}
+          presetUnder18={proposal.signed_under_18}
+        />
       )}
 
       {isDeclined && (
