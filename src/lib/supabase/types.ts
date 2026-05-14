@@ -141,6 +141,7 @@ export type Database = {
       }
       proposals: {
         Row: {
+          additional_recipients: Json
           ai_image_rights: boolean
           cash_incentive: number
           clauses: Json
@@ -170,6 +171,7 @@ export type Database = {
           version: number
         }
         Insert: {
+          additional_recipients?: Json
           ai_image_rights?: boolean
           cash_incentive?: number
           clauses?: Json
@@ -199,6 +201,7 @@ export type Database = {
           version?: number
         }
         Update: {
+          additional_recipients?: Json
           ai_image_rights?: boolean
           cash_incentive?: number
           clauses?: Json

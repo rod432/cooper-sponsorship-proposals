@@ -14,13 +14,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { sendProposal } from "@/app/(staff)/actions";
-import { Copy, Mail } from "lucide-react";
+import { Copy, Mail, Users } from "lucide-react";
+import type { AdditionalRecipient } from "./recipients-card";
+import { ROLE_LABELS } from "./recipients-card";
 
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   proposalId: string | null;
   initialEmail?: string;
+  additionalRecipients?: AdditionalRecipient[];
   onSent?: () => void;
 };
 
@@ -29,6 +32,7 @@ export default function SendProposalDialog({
   onOpenChange,
   proposalId,
   initialEmail = "",
+  additionalRecipients = [],
   onSent,
 }: Props) {
   const { toast } = useToast();
@@ -37,8 +41,13 @@ export default function SendProposalDialog({
   const [result, setResult] = useState<{
     transport: "resend" | "mailto";
     publicUrl: string;
+    recipients: string[];
     mailto?: string;
   } | null>(null);
+
+  const validExtras = additionalRecipients.filter((r) =>
+    r.email.trim().includes("@"),
+  );
 
   const reset = () => {
     setResult(null);
@@ -48,7 +57,7 @@ export default function SendProposalDialog({
   const submit = () => {
     if (!proposalId) return;
     if (!email.trim() || !email.includes("@")) {
-      toast({ title: "Please enter a valid email address", variant: "destructive" });
+      toast({ title: "Please enter a valid player email", variant: "destructive" });
       return;
     }
     startTransition(async () => {
@@ -60,11 +69,15 @@ export default function SendProposalDialog({
       setResult({
         transport: res.transport,
         publicUrl: res.publicUrl,
+        recipients: res.recipients,
         mailto: res.mailto,
       });
       onSent?.();
       if (res.transport === "resend") {
-        toast({ title: "Email sent", description: `Delivered to ${email.trim()}` });
+        toast({
+          title: "Email sent",
+          description: `Delivered to ${res.recipients.length} recipient${res.recipients.length === 1 ? "" : "s"}`,
+        });
       }
     });
   };
@@ -91,29 +104,55 @@ export default function SendProposalDialog({
         {!result ? (
           <>
             <DialogHeader>
-              <DialogTitle>Send proposal to player</DialogTitle>
+              <DialogTitle>Send proposal</DialogTitle>
               <DialogDescription>
-                The player will get a link to review, approve, decline, or request
-                changes.
+                Every recipient below gets the same link to review, approve,
+                decline, or request changes.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-2 py-2">
-              <Label htmlFor="player-email">Player email</Label>
-              <Input
-                id="player-email"
-                type="email"
-                placeholder="player@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                autoFocus
-              />
+
+            <div className="space-y-3 py-2">
+              <div className="space-y-2">
+                <Label htmlFor="player-email">Player email</Label>
+                <Input
+                  id="player-email"
+                  type="email"
+                  placeholder="player@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  autoFocus
+                />
+              </div>
+
+              {validExtras.length > 0 && (
+                <div className="rounded-md border bg-secondary/30 px-3 py-2.5">
+                  <p className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    <Users className="h-3 w-3" /> Copied to
+                  </p>
+                  <ul className="space-y-0.5 text-sm">
+                    {validExtras.map((r, i) => (
+                      <li key={i} className="truncate text-foreground">
+                        <span className="font-medium">{ROLE_LABELS[r.role]}:</span>{" "}
+                        {r.name ? `${r.name} · ` : ""}
+                        <span className="text-muted-foreground">{r.email}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Edit this list on the Edit tab → &quot;Send a copy to&quot;.
+                  </p>
+                </div>
+              )}
             </div>
+
             <DialogFooter>
               <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={isPending}>
                 Cancel
               </Button>
               <Button onClick={submit} disabled={isPending || !proposalId}>
-                {isPending ? "Sending…" : "Send"}
+                {isPending
+                  ? "Sending…"
+                  : `Send to ${1 + validExtras.length} recipient${validExtras.length === 0 ? "" : "s"}`}
               </Button>
             </DialogFooter>
           </>
@@ -125,19 +164,36 @@ export default function SendProposalDialog({
               </DialogTitle>
               <DialogDescription>
                 {result.transport === "resend"
-                  ? `The proposal email was sent to ${email}.`
-                  : "Resend isn't configured, so click below to open your mail client with the message pre-filled. Or copy the link and send it however you prefer."}
+                  ? `Delivered to ${result.recipients.length} recipient${result.recipients.length === 1 ? "" : "s"}.`
+                  : "Resend isn't configured, so click below to open your mail client with everyone on the To: line and the message pre-filled."}
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-2 py-2">
-              <Label>Player link</Label>
-              <div className="flex gap-2">
-                <Input value={result.publicUrl} readOnly className="font-mono text-xs" />
-                <Button variant="outline" onClick={copyLink} title="Copy link">
-                  <Copy className="h-4 w-4" />
-                </Button>
+
+            <div className="space-y-3 py-2">
+              <div>
+                <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Recipients
+                </Label>
+                <ul className="mt-1 space-y-0.5 text-sm">
+                  {result.recipients.map((email, i) => (
+                    <li key={i} className="truncate text-foreground">
+                      {email}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Player link</Label>
+                <div className="flex gap-2">
+                  <Input value={result.publicUrl} readOnly className="font-mono text-xs" />
+                  <Button variant="outline" onClick={copyLink} title="Copy link">
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </div>
+
             <DialogFooter>
               {result.transport === "mailto" && result.mailto && (
                 <Button asChild>

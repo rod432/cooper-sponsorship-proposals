@@ -19,6 +19,9 @@ import StandardTermsCard, {
 } from "@/components/proposal/standard-terms-card";
 import CustomTermsCard from "@/components/proposal/custom-terms-card";
 import NotesCard from "@/components/proposal/notes-card";
+import RecipientsCard, {
+  type AdditionalRecipient,
+} from "@/components/proposal/recipients-card";
 import ProposalPreview from "@/components/proposal/proposal-preview";
 import SendTab from "@/components/proposal/send-tab";
 import SendProposalDialog from "@/components/proposal/send-proposal-dialog";
@@ -35,6 +38,7 @@ interface ProposalState {
   playerEmail: string;
   dealDuration: string;
   isUnder18: boolean;
+  additionalRecipients: AdditionalRecipient[];
   items: ProposalItem[];
   discountPercent: number;
   cashIncentive: number;
@@ -63,6 +67,7 @@ const defaultState: ProposalState = {
   playerEmail: "",
   dealDuration: "",
   isUnder18: false,
+  additionalRecipients: [],
   items: [],
   discountPercent: 0,
   cashIncentive: 0,
@@ -147,6 +152,8 @@ export default function CreateProposalView() {
         playerEmail: data.player_email,
         dealDuration: data.deal_duration,
         isUnder18: data.signed_under_18,
+        additionalRecipients:
+          (data.additional_recipients as unknown as AdditionalRecipient[]) ?? [],
         items: (data.items as unknown as ProposalItem[]).map((item) => ({
           ...item,
           id: item.id || crypto.randomUUID(),
@@ -189,11 +196,17 @@ export default function CreateProposalView() {
       // Prepared-by comes straight from state. It was pre-filled from the
       // signed-in user's staff_profile on first load; staff can override via
       // the cog dialog before saving.
+      // Strip empty rows so we don't try to send to "".
+      const cleanedRecipients = state.additionalRecipients.filter((r) =>
+        r.email.trim().includes("@"),
+      );
+
       const payload = {
         player_name: state.playerName,
         player_email: state.playerEmail,
         deal_duration: state.dealDuration,
         signed_under_18: state.isUnder18,
+        additional_recipients: cleanedRecipients as unknown as Json,
         items: state.items as unknown as Json,
         discount_percent: state.discountPercent,
         cash_incentive: state.cashIncentive,
@@ -333,6 +346,13 @@ export default function CreateProposalView() {
               update(f as keyof ProposalState, v as ProposalState[keyof ProposalState])
             }
           />
+          <RecipientsCard
+            playerEmail={state.playerEmail}
+            playerName={state.playerName}
+            recipients={state.additionalRecipients}
+            isUnder18={state.isUnder18}
+            onChange={(r) => update("additionalRecipients", r)}
+          />
           <EquipmentCatalogCard
             items={state.items}
             onChange={(items) => update("items", items)}
@@ -432,6 +452,7 @@ export default function CreateProposalView() {
           parentSignedName={state.parentSignedName}
           signedUnder18={state.isUnder18}
           playerEmail={state.playerEmail}
+          additionalRecipients={state.additionalRecipients}
           playerName={state.playerName}
           dealDuration={state.dealDuration}
           items={state.items}
@@ -455,6 +476,7 @@ export default function CreateProposalView() {
         onOpenChange={setSendOpen}
         proposalId={persistedId}
         initialEmail={state.playerEmail}
+        additionalRecipients={state.additionalRecipients}
       />
 
       <PreparedByDialog

@@ -10,6 +10,7 @@ import SendProposalDialog from "./send-proposal-dialog";
 import { STATUS_BADGE_CLASSES, STATUS_LABELS } from "@/lib/proposal-totals";
 import type { ProposalItem } from "./equipment-catalog-card";
 import type { SelectedTerm } from "./standard-terms-card";
+import { type AdditionalRecipient, ROLE_LABELS } from "./recipients-card";
 
 interface Props {
   // Identifiers / state
@@ -23,8 +24,9 @@ interface Props {
   parentSignedName: string | null;
   signedUnder18: boolean;
 
-  // Recipient
+  // Recipients
   playerEmail: string;
+  additionalRecipients: AdditionalRecipient[];
 
   // Full proposal data (for the preview)
   playerName: string;
@@ -126,19 +128,35 @@ export default function SendTab(props: Props) {
             </span>
           </div>
 
-          {/* Recipient and link */}
+          {/* Recipients and link */}
           <div className="grid gap-3 text-sm sm:grid-cols-2">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Sending to
               </p>
-              <p className="mt-0.5 text-foreground">
-                {props.playerEmail.trim() || (
-                  <span className="text-destructive">
-                    No email on file — add one in Edit
-                  </span>
-                )}
-              </p>
+              {props.playerEmail.trim() ? (
+                <ul className="mt-0.5 space-y-0.5 text-foreground">
+                  <li>
+                    <span className="text-xs text-primary">Player:</span>{" "}
+                    {props.playerEmail}
+                  </li>
+                  {props.additionalRecipients
+                    .filter((r) => r.email.trim().includes("@"))
+                    .map((r, i) => (
+                      <li key={i}>
+                        <span className="text-xs text-primary">
+                          {ROLE_LABELS[r.role]}:
+                        </span>{" "}
+                        {r.name ? `${r.name} · ` : ""}
+                        <span className="text-muted-foreground">{r.email}</span>
+                      </li>
+                    ))}
+                </ul>
+              ) : (
+                <p className="mt-0.5 text-destructive">
+                  No email on file — add one in Edit
+                </p>
+              )}
             </div>
             {props.reference && (
               <div>
@@ -245,6 +263,7 @@ export default function SendTab(props: Props) {
         onOpenChange={setSendOpen}
         proposalId={props.proposalId}
         initialEmail={props.playerEmail}
+        additionalRecipients={props.additionalRecipients}
       />
     </div>
   );
