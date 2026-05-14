@@ -42,6 +42,7 @@ export default function SendProposalDialog({
     transport: "resend" | "mailto";
     publicUrl: string;
     recipients: string[];
+    perRecipientGroups: number;
     mailto?: string;
   } | null>(null);
 
@@ -70,6 +71,7 @@ export default function SendProposalDialog({
         transport: res.transport,
         publicUrl: res.publicUrl,
         recipients: res.recipients,
+        perRecipientGroups: res.perRecipientGroups,
         mailto: res.mailto,
       });
       onSent?.();
@@ -164,7 +166,7 @@ export default function SendProposalDialog({
               </DialogTitle>
               <DialogDescription>
                 {result.transport === "resend"
-                  ? `Delivered to ${result.recipients.length} recipient${result.recipients.length === 1 ? "" : "s"}.`
+                  ? `Sent ${result.perRecipientGroups} email${result.perRecipientGroups === 1 ? "" : "s"} to ${result.recipients.length} recipient${result.recipients.length === 1 ? "" : "s"}. Each got the version tailored to their role.`
                   : "Resend isn't configured, so click below to open your mail client with everyone on the To: line and the message pre-filled."}
               </DialogDescription>
             </DialogHeader>

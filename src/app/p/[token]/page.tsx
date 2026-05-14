@@ -87,6 +87,7 @@ export default async function PublicProposalPage({
           parentSignedName={proposal.parent_signed_name}
           signedUnder18={proposal.signed_under_18}
           signedAt={proposal.signed_at}
+          expiresAt={proposal.expires_at}
         />
       )}
 
@@ -94,7 +95,7 @@ export default async function PublicProposalPage({
         <ResponseForm
           token={token}
           defaultPlayerName={proposal.player_name}
-          presetUnder18={proposal.signed_under_18}
+          isUnder18={proposal.signed_under_18}
         />
       )}
 

@@ -56,6 +56,7 @@ interface ProposalState {
   preparedByPhone: string;
   sentAt: string | null;
   signedAt: string | null;
+  expiresAt: string | null;
   signedName: string | null;
   parentSignedName: string | null;
   publicToken: string | null;
@@ -84,6 +85,7 @@ const defaultState: ProposalState = {
   preparedByPhone: "",
   sentAt: null,
   signedAt: null,
+  expiresAt: null,
   signedName: null,
   parentSignedName: null,
   publicToken: null,
@@ -173,6 +175,7 @@ export default function CreateProposalView() {
         preparedByPhone: data.prepared_by_phone,
         sentAt: data.sent_at,
         signedAt: data.signed_at,
+        expiresAt: data.expires_at,
         signedName: data.signed_name,
         parentSignedName: data.parent_signed_name,
         publicToken: data.public_token,
@@ -451,6 +454,7 @@ export default function CreateProposalView() {
           signedName={state.signedName}
           parentSignedName={state.parentSignedName}
           signedUnder18={state.isUnder18}
+          expiresAt={state.expiresAt}
           playerEmail={state.playerEmail}
           additionalRecipients={state.additionalRecipients}
           playerName={state.playerName}

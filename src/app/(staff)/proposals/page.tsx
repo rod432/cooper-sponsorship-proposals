@@ -24,6 +24,7 @@ import {
   STATUS_LABELS,
   calcProposalTotals,
 } from "@/lib/proposal-totals";
+import { buildExpiryInfo, COUNTDOWN_TONE_CLASSES } from "@/lib/expiry";
 import type { ProposalItem } from "@/components/proposal/equipment-catalog-card";
 import type { Tables } from "@/lib/supabase/types";
 
@@ -201,6 +202,16 @@ export default function ProposalsPage() {
                     {p.player_email && (
                       <p className="mt-0.5 text-xs text-muted-foreground">{p.player_email}</p>
                     )}
+                    {p.status === "approved" && p.expires_at && (() => {
+                      const exp = buildExpiryInfo(p.expires_at);
+                      return (
+                        <span
+                          className={`mt-1.5 inline-block rounded-full px-2 py-0.5 text-xs font-medium ${COUNTDOWN_TONE_CLASSES[exp.tone]}`}
+                        >
+                          {exp.countdown} · expires {exp.formattedDate}
+                        </span>
+                      );
+                    })()}
                     {latestResponse && (
                       <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
                         <MessageSquare className="h-3 w-3" />

@@ -2,13 +2,15 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Printer, ShieldCheck } from "lucide-react";
+import { Printer, ShieldCheck, CalendarClock } from "lucide-react";
+import { buildExpiryInfo, COUNTDOWN_TONE_CLASSES } from "@/lib/expiry";
 
 type Props = {
   signedName: string;
   parentSignedName: string | null;
   signedUnder18: boolean;
   signedAt: string | null;
+  expiresAt: string | null;
 };
 
 export default function SignedFooter({
@@ -16,7 +18,9 @@ export default function SignedFooter({
   parentSignedName,
   signedUnder18,
   signedAt,
+  expiresAt,
 }: Props) {
+  const expiry = expiresAt ? buildExpiryInfo(expiresAt) : null;
   const signedDate = signedAt
     ? new Date(signedAt).toLocaleString("en-AU", {
         day: "numeric",
@@ -75,6 +79,18 @@ export default function SignedFooter({
           Signed electronically on {signedDate}
           {signedUnder18 ? " · player is under 18, parent/guardian co-signed" : ""}.
         </p>
+
+        {expiry && (
+          <div
+            className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm ${COUNTDOWN_TONE_CLASSES[expiry.tone]}`}
+          >
+            <CalendarClock className="h-4 w-4" />
+            <span>
+              Agreement expires <strong>{expiry.formattedDate}</strong> ·{" "}
+              {expiry.countdown}
+            </span>
+          </div>
+        )}
 
         <div className="print:hidden">
           <Button onClick={() => window.print()} variant="outline">

@@ -6,8 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Check, X, MessageSquare, Pencil } from "lucide-react";
+import { Check, X, MessageSquare, Pencil, ShieldAlert } from "lucide-react";
 import { submitResponse } from "./actions";
 
 type Choice = "approve" | "decline" | "request_changes";
@@ -21,16 +20,16 @@ const labels: Record<Choice, string> = {
 type Props = {
   token: string;
   defaultPlayerName?: string;
-  /** Staff pre-set this player as under 18. Locks the checkbox on. */
-  presetUnder18?: boolean;
+  /** Whether this proposal requires a parent/guardian co-signature.
+   *  Set by staff on the proposal record — the player can't override it. */
+  isUnder18: boolean;
 };
 
 export default function ResponseForm({
   token,
   defaultPlayerName = "",
-  presetUnder18 = false,
+  isUnder18,
 }: Props) {
-  const [under18, setUnder18] = useState(presetUnder18);
   const [choice, setChoice] = useState<Choice | null>(null);
   const [message, setMessage] = useState("");
   const [signedName, setSignedName] = useState(defaultPlayerName);
@@ -49,7 +48,7 @@ export default function ResponseForm({
         setError("Please type your full legal name to sign.");
         return;
       }
-      if (under18 && parentSignedName.trim().length < 2) {
+      if (isUnder18 && parentSignedName.trim().length < 2) {
         setError("A parent or guardian also needs to type their full name.");
         return;
       }
@@ -68,12 +67,11 @@ export default function ResponseForm({
         responseType: choice,
         message,
         signedName: choice === "approve" ? signedName.trim() : "",
-        parentSignedName: choice === "approve" && under18 ? parentSignedName.trim() : "",
-        under18,
+        parentSignedName:
+          choice === "approve" && isUnder18 ? parentSignedName.trim() : "",
       });
       if (res.ok) {
         setDone(choice);
-        // Reload so the page re-renders in its signed state.
         if (choice === "approve") {
           window.location.reload();
         }
@@ -100,29 +98,27 @@ export default function ResponseForm({
 
   return (
     <div className="space-y-4">
-      <Card className="border-warning/40 bg-warning/5">
-        <CardContent className="flex items-start gap-3 py-4">
-          <Checkbox
-            id="under-18"
-            checked={under18}
-            disabled={presetUnder18}
-            onCheckedChange={(v) => setUnder18(v === true)}
-            className="mt-0.5"
-          />
-          <div className="space-y-1">
-            <Label htmlFor="under-18" className="font-heading text-sm font-semibold">
-              {presetUnder18
-                ? "Player is under 18 — parent or guardian must co-sign"
-                : "I am under 18 years old"}
-            </Label>
-            <p className="text-xs text-muted-foreground">
-              {presetUnder18
-                ? "Cooper Cricket has marked this proposal as requiring a parent or guardian signature alongside the player's signature."
-                : "If ticked, a parent or guardian must also type their name to co-sign this proposal."}
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Under-18 status banner — shown only when set by staff. The player
+          can't change this. */}
+      {isUnder18 && (
+        <Card className="border-warning/40 bg-warning/5">
+          <CardContent className="flex items-start gap-3 py-4">
+            <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+            <div className="space-y-1">
+              <p className="font-heading text-sm font-semibold text-foreground">
+                Parent or guardian signature required
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Cooper Cricket has flagged this proposal as for a player under 18.
+                When you sign, your parent or guardian must also type their full
+                name to co-sign. They&apos;ll have received their own email about
+                this — if not, please make sure they review the proposal before
+                you sign.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardContent className="space-y-4 py-6">
@@ -174,12 +170,12 @@ export default function ResponseForm({
 
               <SignatureField
                 id="player-signature"
-                label="Your full legal name"
+                label="Player&rsquo;s full legal name"
                 value={signedName}
                 onChange={setSignedName}
               />
 
-              {under18 && (
+              {isUnder18 && (
                 <SignatureField
                   id="parent-signature"
                   label="Parent or guardian's full legal name"
@@ -189,16 +185,18 @@ export default function ResponseForm({
               )}
 
               <div className="flex items-start gap-2 pt-2">
-                <Checkbox
+                <input
                   id="agree"
+                  type="checkbox"
                   checked={agree}
-                  onCheckedChange={(v) => setAgree(v === true)}
-                  className="mt-0.5"
+                  onChange={(e) => setAgree(e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-input text-primary focus:ring-primary"
                 />
                 <Label htmlFor="agree" className="text-xs leading-relaxed text-foreground">
-                  By typing my name above and clicking <strong>Approve &amp; Sign</strong>,
-                  I agree this serves as my electronic signature
-                  {under18 ? " (and my parent or guardian's signature) " : " "}
+                  By typing my name above and clicking{" "}
+                  <strong>Approve &amp; Sign</strong>, I agree this serves as my
+                  electronic signature
+                  {isUnder18 ? " (and the parent or guardian's signature) " : " "}
                   and that I am bound by the terms of this sponsorship proposal.
                 </Label>
               </div>
@@ -261,7 +259,7 @@ function SignatureField({
         id={id}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder="Type your name"
+        placeholder="Type the full legal name"
         autoComplete="name"
       />
       <div className="rounded-md border border-dashed bg-background px-3 py-4">
@@ -272,7 +270,7 @@ function SignatureField({
           className="mt-1 font-signature text-3xl leading-tight text-foreground"
           style={{ fontFamily: "var(--font-signature)" }}
         >
-          {value.trim() || " "}
+          {value.trim() || " "}
         </p>
       </div>
     </div>

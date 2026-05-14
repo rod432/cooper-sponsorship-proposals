@@ -8,6 +8,7 @@ import { Copy, ExternalLink, Mail, ShieldCheck } from "lucide-react";
 import ProposalPreview from "./proposal-preview";
 import SendProposalDialog from "./send-proposal-dialog";
 import { STATUS_BADGE_CLASSES, STATUS_LABELS } from "@/lib/proposal-totals";
+import { buildExpiryInfo, COUNTDOWN_TONE_CLASSES } from "@/lib/expiry";
 import type { ProposalItem } from "./equipment-catalog-card";
 import type { SelectedTerm } from "./standard-terms-card";
 import { type AdditionalRecipient, ROLE_LABELS } from "./recipients-card";
@@ -23,6 +24,7 @@ interface Props {
   signedName: string | null;
   parentSignedName: string | null;
   signedUnder18: boolean;
+  expiresAt: string | null;
 
   // Recipients
   playerEmail: string;
@@ -210,6 +212,21 @@ export default function SendTab(props: Props) {
               </div>
             </div>
           )}
+
+          {/* Expiry countdown when approved */}
+          {isApproved && props.expiresAt && (() => {
+            const exp = buildExpiryInfo(props.expiresAt);
+            return (
+              <div
+                className={`rounded-lg px-3 py-2.5 text-sm ${COUNTDOWN_TONE_CLASSES[exp.tone]}`}
+              >
+                <p className="font-medium">
+                  Agreement expires {exp.formattedDate}
+                </p>
+                <p className="text-xs opacity-80">{exp.countdown}</p>
+              </div>
+            );
+          })()}
 
           <div className="flex flex-wrap gap-2 pt-1">
             <Button

@@ -148,6 +148,7 @@ export type Database = {
           created_at: string
           deal_duration: string
           discount_percent: number
+          expires_at: string | null
           id: string
           items: Json
           notes: string
@@ -178,6 +179,7 @@ export type Database = {
           created_at?: string
           deal_duration?: string
           discount_percent?: number
+          expires_at?: string | null
           id?: string
           items?: Json
           notes?: string
@@ -208,6 +210,7 @@ export type Database = {
           created_at?: string
           deal_duration?: string
           discount_percent?: number
+          expires_at?: string | null
           id?: string
           items?: Json
           notes?: string
