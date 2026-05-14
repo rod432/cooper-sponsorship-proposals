@@ -13,17 +13,29 @@ export async function updateProfile(formData: FormData) {
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.updateUser({
-    data: {
+  const { data: userData, error: userErr } = await supabase.auth.getUser();
+  if (userErr || !userData.user) {
+    return { ok: false, error: "Not signed in." };
+  }
+  const user = userData.user;
+
+  // Mirror to auth.users.user_metadata so it's available on other clients.
+  const { error: authErr } = await supabase.auth.updateUser({
+    data: { full_name: fullName, role, phone },
+  });
+  if (authErr) return { ok: false, error: authErr.message };
+
+  // Source of truth: staff_profiles row (queryable for the picker).
+  const { error: profileErr } = await supabase
+    .from("staff_profiles")
+    .upsert({
+      user_id: user.id,
+      email: user.email ?? "",
       full_name: fullName,
       role,
       phone,
-    },
-  });
-
-  if (error) {
-    return { ok: false, error: error.message };
-  }
+    });
+  if (profileErr) return { ok: false, error: profileErr.message };
 
   revalidatePath("/profile");
   revalidatePath("/");

@@ -22,8 +22,11 @@ import NotesCard from "@/components/proposal/notes-card";
 import ProposalPreview from "@/components/proposal/proposal-preview";
 import SendTab from "@/components/proposal/send-tab";
 import SendProposalDialog from "@/components/proposal/send-proposal-dialog";
+import PreparedByDialog, {
+  type PreparedBy,
+} from "@/components/proposal/prepared-by-dialog";
 import { Button } from "@/components/ui/button";
-import { Eye, Mail, Save } from "lucide-react";
+import { Eye, Mail, Save, Settings } from "lucide-react";
 import { STATUS_BADGE_CLASSES, STATUS_LABELS } from "@/lib/proposal-totals";
 import type { Json } from "@/lib/supabase/types";
 
@@ -92,6 +95,42 @@ export default function CreateProposalView() {
   const [loaded, setLoaded] = useState(false);
   const [persistedId, setPersistedId] = useState<string | null>(editIdFromUrl);
   const [sendOpen, setSendOpen] = useState(false);
+  const [preparedByOpen, setPreparedByOpen] = useState(false);
+  // True until the user has explicitly chosen a Prepared-by — once they do
+  // (or once we load an existing proposal), we stop auto-overwriting from
+  // the signed-in user's profile.
+  const [preparedByPristine, setPreparedByPristine] = useState(!editIdFromUrl);
+
+  // For a brand-new proposal, pre-fill Prepared-by from the signed-in user's
+  // staff profile. Stops once the user picks someone else via the cog dialog
+  // or once they save.
+  useEffect(() => {
+    if (editIdFromUrl) return; // existing proposal handled by useQuery below
+    if (!preparedByPristine) return;
+    let cancelled = false;
+    (async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      const user = userData.user;
+      if (!user || cancelled) return;
+      const { data: profile } = await supabase
+        .from("staff_profiles")
+        .select("full_name, role, phone, email")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (cancelled) return;
+      const fallbackName = user.email ? user.email.split("@")[0] : "";
+      setState((s) => ({
+        ...s,
+        preparedByName: profile?.full_name || fallbackName,
+        preparedByEmail: profile?.email || user.email || "",
+        preparedByRole: profile?.role || "",
+        preparedByPhone: profile?.phone || "",
+      }));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [editIdFromUrl, preparedByPristine]);
 
   useQuery({
     queryKey: ["proposal", editIdFromUrl],
@@ -147,23 +186,9 @@ export default function CreateProposalView() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      // Pull the signed-in user so we can attribute the proposal to them.
-      const { data: userData } = await supabase.auth.getUser();
-      const user = userData.user;
-      const metadata = (user?.user_metadata ?? {}) as {
-        full_name?: string;
-        name?: string;
-        role?: string;
-        phone?: string;
-      };
-      const preparedByEmail = user?.email ?? "";
-      const preparedByName =
-        metadata.full_name ||
-        metadata.name ||
-        (preparedByEmail ? preparedByEmail.split("@")[0] : "");
-      const preparedByRole = metadata.role ?? "";
-      const preparedByPhone = metadata.phone ?? "";
-
+      // Prepared-by comes straight from state. It was pre-filled from the
+      // signed-in user's staff_profile on first load; staff can override via
+      // the cog dialog before saving.
       const payload = {
         player_name: state.playerName,
         player_email: state.playerEmail,
@@ -177,45 +202,28 @@ export default function CreateProposalView() {
         photo_provisions: state.photoProvisions,
         terms: state.selectedTerms as unknown as Json,
         notes: state.notes,
+        prepared_by_name: state.preparedByName,
+        prepared_by_email: state.preparedByEmail,
+        prepared_by_role: state.preparedByRole,
+        prepared_by_phone: state.preparedByPhone,
       };
 
       if (persistedId) {
         const { data: current } = await supabase
           .from("proposals")
-          .select("version, prepared_by_name, prepared_by_email")
+          .select("version")
           .eq("id", persistedId)
           .single();
-        // Only set prepared_by on first save (don't overwrite if another staff
-        // member opens an existing proposal to make changes).
-        const preparedByPatch =
-          current?.prepared_by_email
-            ? {}
-            : {
-                prepared_by_name: preparedByName,
-                prepared_by_email: preparedByEmail,
-                prepared_by_role: preparedByRole,
-                prepared_by_phone: preparedByPhone,
-              };
         const { error } = await supabase
           .from("proposals")
-          .update({
-            ...payload,
-            ...preparedByPatch,
-            version: (current?.version ?? 1) + 1,
-          })
+          .update({ ...payload, version: (current?.version ?? 1) + 1 })
           .eq("id", persistedId);
         if (error) throw error;
         return persistedId;
       } else {
         const { data, error } = await supabase
           .from("proposals")
-          .insert({
-            ...payload,
-            prepared_by_name: preparedByName,
-            prepared_by_email: preparedByEmail,
-            prepared_by_role: preparedByRole,
-            prepared_by_phone: preparedByPhone,
-          })
+          .insert(payload)
           .select("id")
           .single();
         if (error) throw error;
@@ -267,17 +275,40 @@ export default function CreateProposalView() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="font-heading text-2xl font-bold text-foreground">
-            {persistedId ? "Edit Proposal" : "Create Proposal"}
-          </h1>
-          {persistedId && (state.reference || state.status !== "draft") && (
-            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
-              {state.reference && (
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <h1 className="font-heading text-2xl font-bold text-foreground">
+              {persistedId ? "Edit Proposal" : "Create Proposal"}
+            </h1>
+            <button
+              type="button"
+              onClick={() => setPreparedByOpen(true)}
+              className="rounded-full p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
+              title="Change who this proposal is from"
+              aria-label="Change Prepared by"
+            >
+              <Settings className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+            <span className="text-muted-foreground">From:</span>
+            <button
+              type="button"
+              onClick={() => setPreparedByOpen(true)}
+              className="font-medium text-foreground underline-offset-2 hover:underline"
+            >
+              {state.preparedByName || "Not set"}
+              {state.preparedByRole ? ` · ${state.preparedByRole}` : ""}
+            </button>
+            {persistedId && state.reference && (
+              <>
+                <span className="text-muted-foreground">·</span>
                 <span className="font-mono text-muted-foreground">
                   {state.reference}
                 </span>
-              )}
+              </>
+            )}
+            {persistedId && state.status !== "draft" && (
               <span
                 className={`rounded-full px-2 py-0.5 font-medium ${
                   STATUS_BADGE_CLASSES[state.status] ?? "bg-muted text-muted-foreground"
@@ -285,8 +316,8 @@ export default function CreateProposalView() {
               >
                 {STATUS_LABELS[state.status] ?? state.status}
               </span>
-            </div>
-          )}
+            )}
+          </div>
         </div>
         <TabSwitcher activeTab={activeTab} onTabChange={setActiveTab} />
       </div>
@@ -424,6 +455,27 @@ export default function CreateProposalView() {
         onOpenChange={setSendOpen}
         proposalId={persistedId}
         initialEmail={state.playerEmail}
+      />
+
+      <PreparedByDialog
+        open={preparedByOpen}
+        onOpenChange={setPreparedByOpen}
+        value={{
+          name: state.preparedByName,
+          email: state.preparedByEmail,
+          role: state.preparedByRole,
+          phone: state.preparedByPhone,
+        }}
+        onApply={(next: PreparedBy) => {
+          setPreparedByPristine(false);
+          setState((s) => ({
+            ...s,
+            preparedByName: next.name,
+            preparedByEmail: next.email,
+            preparedByRole: next.role,
+            preparedByPhone: next.phone,
+          }));
+        }}
       />
     </div>
   );
