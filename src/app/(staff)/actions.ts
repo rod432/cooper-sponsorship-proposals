@@ -334,29 +334,44 @@ export async function sendProposal(
   if (process.env.RESEND_API_KEY) {
     try {
       const resend = new Resend(process.env.RESEND_API_KEY);
-      // Send all in parallel. If any one fails, surface the error.
-      const results = await Promise.all(
-        sends.map((s) =>
-          resend.emails.send({
-            from: SENDER,
-            to: s.to,
-            subject: s.subject,
-            text: s.text,
-            html: s.html,
-          }),
-        ),
-      );
-      const failed = results.find((r) => r.error);
-      if (failed?.error) {
-        return {
-          ok: false,
-          transport: "resend",
-          publicUrl,
-          recipients: allRecipients,
-          perRecipientGroups: sends.length,
-          error: failed.error.message,
-        } satisfies SendResult;
+      const payloads = sends.map((s) => ({
+        from: SENDER,
+        to: s.to,
+        subject: s.subject,
+        text: s.text,
+        html: s.html,
+      }));
+
+      // Resend's free tier is 2 requests/sec — N parallel sends blow past it
+      // when there are 3+ recipients. The batch API delivers up to 100
+      // distinct emails in one API call, sidestepping the rate limit and
+      // staying within plan quota.
+      if (payloads.length === 1) {
+        const single = await resend.emails.send(payloads[0]);
+        if (single.error) {
+          return {
+            ok: false,
+            transport: "resend",
+            publicUrl,
+            recipients: allRecipients,
+            perRecipientGroups: sends.length,
+            error: single.error.message,
+          } satisfies SendResult;
+        }
+      } else {
+        const batch = await resend.batch.send(payloads);
+        if (batch.error) {
+          return {
+            ok: false,
+            transport: "resend",
+            publicUrl,
+            recipients: allRecipients,
+            perRecipientGroups: sends.length,
+            error: batch.error.message,
+          } satisfies SendResult;
+        }
       }
+
       await supabase
         .from("proposals")
         .update({ status: "sent", sent_at: new Date().toISOString() })
