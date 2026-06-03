@@ -205,12 +205,42 @@ ${COMPANY.tradingName}`;
   return { subject, text, html };
 }
 
+function buildManagerEmail(ctx: TemplateContext, name?: string) {
+  const refSuffix = ctx.reference ? ` (${ctx.reference})` : "";
+  const subject = `Sponsorship proposal for ${ctx.playerName || "your player"} — your review${refSuffix}`;
+  const greeting = name ? `Hi ${name.split(" ")[0]},` : "Hi,";
+  const playerLabel = ctx.playerName || "your player";
+  const text = `${greeting}
+
+${COMPANY.tradingName} has prepared a sponsorship proposal for ${playerLabel}. As their manager, you can review the full details and either approve it or request changes — both options are on the proposal page.
+
+Review the proposal here: ${ctx.link}
+
+If anything looks off or you'd like to talk it through, reply to this email or call ${COMPANY.phone}.`;
+  const bodyHtml = `
+      <p style="margin:0 0 18px;font-size:16px;line-height:1.6;">${escapeHtml(greeting)}</p>
+      <p style="margin:0 0 18px;font-size:15px;line-height:1.6;">${COMPANY.tradingName} has prepared a sponsorship proposal for <strong>${escapeHtml(playerLabel)}</strong>. As their manager, you can review the full details and either <strong>approve</strong> it or <strong>request changes</strong>.</p>
+      <p style="margin:0 0 26px;"><a href="${ctx.link}" style="display:inline-block;background:#0099bf;color:#ffffff;text-decoration:none;padding:12px 22px;border-radius:8px;font-size:15px;font-weight:600;">Review the proposal</a></p>
+      <p style="margin:0;font-size:14px;line-height:1.5;color:#5b6670;">If anything looks off or you'd like to talk it through, reply to this email or call ${escapeHtml(COMPANY.phone)}.</p>`;
+  return { subject, text, html: shell({ reference: ctx.reference, bodyHtml }) };
+}
+
 // ---------------------------------------------------------------------------
+
+type SendOptions = {
+  playerEmailOverride?: string;
+  includePlayer?: boolean;
+  recipients?: AdditionalRecipient[];
+};
 
 export async function sendProposal(
   proposalId: string,
-  playerEmailOverride?: string,
+  opts: SendOptions | string = {},
 ) {
+  // Back-compat: a bare string argument is treated as a player email override.
+  const o: SendOptions =
+    typeof opts === "string" ? { playerEmailOverride: opts } : opts;
+  const includePlayer = o.includePlayer ?? true;
   const supabase = await createClient();
 
   const { data: proposal, error } = await supabase
@@ -232,10 +262,11 @@ export async function sendProposal(
     } satisfies SendResult;
   }
 
-  const playerEmail = (playerEmailOverride ?? proposal.player_email ?? "").trim();
+  const playerEmail = (o.playerEmailOverride ?? proposal.player_email ?? "").trim();
   if (
-    playerEmailOverride !== undefined &&
-    playerEmailOverride !== proposal.player_email
+    includePlayer &&
+    o.playerEmailOverride !== undefined &&
+    o.playerEmailOverride !== proposal.player_email
   ) {
     await supabase
       .from("proposals")
@@ -243,9 +274,9 @@ export async function sendProposal(
       .eq("id", proposal.id);
   }
 
-  const extras = ((proposal.additional_recipients as unknown as
+  const extras = (o.recipients ?? ((proposal.additional_recipients as unknown as
     | AdditionalRecipient[]
-    | null) ?? []).filter((r) => r.email && r.email.trim().includes("@"));
+    | null) ?? [])).filter((r) => r.email && r.email.trim().includes("@"));
 
   const base = await inferBaseUrl();
   const publicUrl = `${base}/p/${proposal.public_token}`;
@@ -281,7 +312,7 @@ export async function sendProposal(
   const allRecipients: string[] = [];
 
   // 1) Player
-  const playerTo = consume(playerEmail);
+  const playerTo = includePlayer ? consume(playerEmail) : null;
   if (playerTo) {
     const e = buildPlayerEmail(ctx);
     sends.push({ to: [playerTo], ...e });
@@ -314,8 +345,15 @@ export async function sendProposal(
   for (const r of others) {
     const to = consume(r.email);
     if (!to) continue;
-    const roleLabel = ((r.role ?? "other").charAt(0).toUpperCase() + (r.role ?? "other").slice(1));
-    const e = buildCopyEmail(ctx, roleLabel, r.name);
+    const role = (r.role ?? "other").toLowerCase();
+    const roleLabel =
+      (r.role ?? "other").charAt(0).toUpperCase() + (r.role ?? "other").slice(1);
+    // Managers are decision-makers: they get an actionable email (review,
+    // approve, or request changes), not the passive "copied for reference" note.
+    const e =
+      role === "manager"
+        ? buildManagerEmail(ctx, r.name)
+        : buildCopyEmail(ctx, roleLabel, r.name);
     sends.push({ to: [to], ...e });
     allRecipients.push(to);
   }

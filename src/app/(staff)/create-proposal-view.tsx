@@ -410,9 +410,19 @@ export default function CreateProposalView() {
                 <Eye className="mr-1.5 h-4 w-4" />
                 Preview
               </Button>
-              <Button onClick={handleSend} disabled={!state.playerEmail.trim()}>
+              <Button
+                onClick={handleSend}
+                disabled={
+                  !state.playerEmail.trim() &&
+                  !state.additionalRecipients.some(
+                    (r) =>
+                      (r.role ?? "").toLowerCase() === "manager" &&
+                      r.email.trim().includes("@"),
+                  )
+                }
+              >
                 <Mail className="mr-1.5 h-4 w-4" />
-                Send to player
+                Send
               </Button>
             </div>
           </div>

@@ -55,7 +55,13 @@ export default function SendTab(props: Props) {
   const isApproved = props.status === "approved";
   const isDeclined = props.status === "declined";
   const hasBeenSent = !!props.sentAt;
-  const canSend = !!props.proposalId && !!props.playerEmail.trim();
+  const hasManager = props.additionalRecipients.some(
+    (r) =>
+      (r.role ?? "").toLowerCase() === "manager" &&
+      r.email.trim().includes("@"),
+  );
+  const canSend =
+    !!props.proposalId && (!!props.playerEmail.trim() || hasManager);
 
   const publicUrl =
     props.publicToken && typeof window !== "undefined"
@@ -136,12 +142,14 @@ export default function SendTab(props: Props) {
               <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Sending to
               </p>
-              {props.playerEmail.trim() ? (
+              {props.playerEmail.trim() || hasManager ? (
                 <ul className="mt-0.5 space-y-0.5 text-foreground">
-                  <li>
-                    <span className="text-xs text-primary">Player:</span>{" "}
-                    {props.playerEmail}
-                  </li>
+                  {props.playerEmail.trim() && (
+                    <li>
+                      <span className="text-xs text-primary">Player:</span>{" "}
+                      {props.playerEmail}
+                    </li>
+                  )}
                   {props.additionalRecipients
                     .filter((r) => r.email.trim().includes("@"))
                     .map((r, i) => (
@@ -243,9 +251,9 @@ export default function SendTab(props: Props) {
                 Save the proposal first.
               </p>
             )}
-            {props.proposalId && !props.playerEmail.trim() && (
+            {props.proposalId && !props.playerEmail.trim() && !hasManager && (
               <p className="self-center text-xs text-destructive">
-                Add a player email on the Edit tab before sending.
+                Add a player email (or a manager) on the Edit tab before sending.
               </p>
             )}
           </div>
