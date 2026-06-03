@@ -127,14 +127,14 @@ const ProposalPreview = (props: ProposalPreviewProps) => {
             {COMPANY.tradingName}
             {dealDuration ? ` for the next ${dealDuration}` : ""}. We&rsquo;re a
             proud family-owned business, and we&rsquo;ve worked incredibly hard
-            to stand shoulder to shoulder with the big brands &mdash; with a
-            genuinely different approach.
+            to stand shoulder to shoulder with the big brands, with a genuinely
+            different approach.
           </p>
           <p>
             We&rsquo;ve pioneered exactness in cricket bat making: CNC-machined
             handles and blades, paired with the clever use of AI, mean we can
             craft exactly what you want and reproduce it time after time. No
-            guesswork &mdash; the bat you love, made the same way every single
+            guesswork, just the bat you love, made the same way every single
             time.
           </p>
           <p>
