@@ -142,6 +142,21 @@ const ProposalPreview = (props: ProposalPreviewProps) => {
             together for you below. We&rsquo;d love to have you on the team, and
             we look forward to hearing from you.
           </p>
+          <div className="pt-2">
+            <Image
+              src="/rod-grey-signature.png"
+              alt="Rod Grey signature"
+              width={330}
+              height={212}
+              className="h-20 w-auto"
+            />
+            <p className="mt-1 font-heading text-base font-semibold text-foreground">
+              Rod Grey
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Founder &amp; Director, {COMPANY.tradingName}
+            </p>
+          </div>
         </section>
 
         {/* Prepared for / Prepared by */}
