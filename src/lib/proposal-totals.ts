@@ -25,6 +25,7 @@ export function calcProposalTotals(
 export const STATUS_LABELS: Record<string, string> = {
   draft: "Draft",
   sent: "Sent",
+  partially_signed: "Awaiting co-signature",
   approved: "Approved",
   declined: "Declined",
   changes_requested: "Changes Requested",
@@ -33,6 +34,7 @@ export const STATUS_LABELS: Record<string, string> = {
 export const STATUS_BADGE_CLASSES: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
   sent: "bg-primary/10 text-primary",
+  partially_signed: "bg-warning/10 text-warning",
   approved: "bg-success/10 text-success",
   declined: "bg-destructive/10 text-destructive",
   changes_requested: "bg-warning/10 text-warning",

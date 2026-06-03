@@ -17,6 +17,9 @@ type Input = {
   message: string;
   signedName: string;
   parentSignedName: string;
+  // For under-18 proposals the player and parent/guardian sign independently.
+  // This says who is signing right now. Ignored for adult proposals.
+  signerRole?: "player" | "parent";
 };
 
 export async function submitResponse(input: Input) {
@@ -30,9 +33,6 @@ export async function submitResponse(input: Input) {
   const trimmedSigned = signedName.trim();
   const trimmedParent = parentSignedName.trim();
 
-  if (responseType === "approve" && trimmedSigned.length < 2) {
-    return { ok: false, error: "Please type your full legal name to sign." };
-  }
   if (responseType !== "approve" && trimmedMessage.length === 0) {
     return {
       ok: false,
@@ -44,7 +44,9 @@ export async function submitResponse(input: Input) {
 
   const { data: proposal, error: fetchErr } = await supabase
     .from("proposals")
-    .select("id, status, deal_duration, signed_under_18")
+    .select(
+      "id, status, deal_duration, signed_under_18, player_signed_name, player_signed_at, parent_signed_name, parent_signed_at",
+    )
     .eq("public_token", token)
     .single();
   if (fetchErr || !proposal) {
@@ -53,46 +55,103 @@ export async function submitResponse(input: Input) {
   if (proposal.status === "approved" || proposal.status === "declined") {
     return {
       ok: false,
-      error: "This proposal has already been finalised. Contact Cooper Cricket to discuss.",
-    };
-  }
-
-  // Under-18 status is decided by staff on the proposal — the player has no
-  // say. Override whatever the client posted with the canonical value from
-  // the proposal row, so the player can't sign as an adult on an under-18
-  // proposal (or vice versa).
-  const effectiveUnder18 = proposal.signed_under_18;
-
-  if (responseType === "approve" && effectiveUnder18 && trimmedParent.length < 2) {
-    return {
-      ok: false,
       error:
-        "This proposal requires a parent or guardian signature. Please type the parent/guardian's full name.",
+        "This proposal has already been finalised. Contact Cooper Cricket to discuss.",
     };
   }
 
-  const { error: insertErr } = await supabase.from("proposal_responses").insert({
-    proposal_id: proposal.id,
-    response_type: responseType,
-    message: trimmedMessage,
-    signed_name: responseType === "approve" ? trimmedSigned : null,
-    parent_signed_name:
-      responseType === "approve" && effectiveUnder18 ? trimmedParent : null,
-    under_18: effectiveUnder18,
-  });
+  // Under-18 status is decided by staff on the proposal — the client can't
+  // override it.
+  const under18 = proposal.signed_under_18;
+
+  // ----- Decline / request changes (either party, any time before finalised) -----
+  if (responseType !== "approve") {
+    const { error: insertErr } = await supabase
+      .from("proposal_responses")
+      .insert({
+        proposal_id: proposal.id,
+        response_type: responseType,
+        message: trimmedMessage,
+        signed_name: null,
+        parent_signed_name: null,
+        under_18: under18,
+      });
+    if (insertErr) return { ok: false, error: insertErr.message };
+
+    const { error: updateErr } = await supabase
+      .from("proposals")
+      .update({ status: STATUS_FROM_RESPONSE[responseType] })
+      .eq("id", proposal.id);
+    if (updateErr) return { ok: false, error: updateErr.message };
+
+    revalidatePath(`/p/${token}`);
+    return { ok: true };
+  }
+
+  // ----- Approve / sign -----
+  const role: "player" | "parent" =
+    under18 && input.signerRole === "parent" ? "parent" : "player";
+
+  // The name typed by whoever is signing right now.
+  const thisName = role === "parent" ? trimmedParent : trimmedSigned;
+  if (thisName.length < 2) {
+    return { ok: false, error: "Please type the full legal name to sign." };
+  }
+
+  // Block the same party signing twice.
+  if (under18) {
+    if (role === "player" && proposal.player_signed_at) {
+      return { ok: false, error: "The player has already signed this proposal." };
+    }
+    if (role === "parent" && proposal.parent_signed_at) {
+      return {
+        ok: false,
+        error: "The parent or guardian has already signed this proposal.",
+      };
+    }
+  }
+
+  const nowIso = new Date().toISOString();
+
+  // State after applying this signature.
+  const playerName = role === "player" ? thisName : proposal.player_signed_name ?? null;
+  const playerAt = role === "player" ? nowIso : proposal.player_signed_at ?? null;
+  const parentName = role === "parent" ? thisName : proposal.parent_signed_name ?? null;
+  const parentAt = role === "parent" ? nowIso : proposal.parent_signed_at ?? null;
+
+  // Adult: finalises on the player's signature.
+  // Under-18: finalises only once BOTH player and parent have signed.
+  const fullySigned = under18 ? !!playerAt && !!parentAt : true;
+
+  // Audit row for this individual signature.
+  const { error: insertErr } = await supabase
+    .from("proposal_responses")
+    .insert({
+      proposal_id: proposal.id,
+      response_type: "approve",
+      message: trimmedMessage,
+      signed_name: role === "player" ? thisName : null,
+      parent_signed_name: role === "parent" ? thisName : null,
+      under_18: under18,
+    });
   if (insertErr) return { ok: false, error: insertErr.message };
 
   const update: TablesUpdate<"proposals"> = {
-    status: STATUS_FROM_RESPONSE[responseType],
+    player_signed_name: playerName,
+    player_signed_at: playerAt,
+    parent_signed_name: parentName,
+    parent_signed_at: parentAt,
+    signed_under_18: under18,
   };
-  if (responseType === "approve") {
-    const signedAtIso = new Date().toISOString();
+
+  if (fullySigned) {
     const years = parseYearsFromDuration(proposal.deal_duration);
-    update.signed_name = trimmedSigned;
-    update.parent_signed_name = effectiveUnder18 ? trimmedParent : null;
-    update.signed_under_18 = effectiveUnder18;
-    update.signed_at = signedAtIso;
-    update.expires_at = addYearsIso(signedAtIso, years);
+    update.status = "approved";
+    update.signed_name = under18 ? playerName : thisName;
+    update.signed_at = nowIso;
+    update.expires_at = addYearsIso(nowIso, years);
+  } else {
+    update.status = "partially_signed";
   }
 
   const { error: updateErr } = await supabase

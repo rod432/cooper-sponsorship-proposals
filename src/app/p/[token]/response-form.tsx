@@ -23,18 +23,38 @@ type Props = {
   /** Whether this proposal requires a parent/guardian co-signature.
    *  Set by staff on the proposal record — the player can't override it. */
   isUnder18: boolean;
+  /** Under-18 only: has the player already signed independently? */
+  playerSigned?: boolean;
+  /** Under-18 only: has the parent/guardian already signed independently? */
+  parentSigned?: boolean;
 };
 
 export default function ResponseForm({
   token,
   defaultPlayerName = "",
   isUnder18,
+  playerSigned = false,
+  parentSigned = false,
 }: Props) {
+  // Under-18 proposals are co-signed independently. If one party has already
+  // signed, the remaining party is the only one who can sign now.
+  const parentTurnOnly = isUnder18 && playerSigned && !parentSigned;
+  const playerTurnOnly = isUnder18 && parentSigned && !playerSigned;
+
   const [choice, setChoice] = useState<Choice | null>(null);
   const [message, setMessage] = useState("");
   const [signedName, setSignedName] = useState(defaultPlayerName);
   const [parentSignedName, setParentSignedName] = useState("");
+  const [signerRole, setSignerRole] = useState<"player" | "parent">(
+    parentTurnOnly ? "parent" : "player",
+  );
   const [agree, setAgree] = useState(false);
+
+  const effectiveRole: "player" | "parent" = parentTurnOnly
+    ? "parent"
+    : playerTurnOnly
+      ? "player"
+      : signerRole;
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<Choice | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -44,12 +64,19 @@ export default function ResponseForm({
     setError(null);
 
     if (choice === "approve") {
-      if (signedName.trim().length < 2) {
+      if (isUnder18) {
+        if (effectiveRole === "player" && signedName.trim().length < 2) {
+          setError("Please type the player's full legal name to sign.");
+          return;
+        }
+        if (effectiveRole === "parent" && parentSignedName.trim().length < 2) {
+          setError(
+            "Please type the parent or guardian's full legal name to sign.",
+          );
+          return;
+        }
+      } else if (signedName.trim().length < 2) {
         setError("Please type your full legal name to sign.");
-        return;
-      }
-      if (isUnder18 && parentSignedName.trim().length < 2) {
-        setError("A parent or guardian also needs to type their full name.");
         return;
       }
       if (!agree) {
@@ -66,9 +93,15 @@ export default function ResponseForm({
         token,
         responseType: choice,
         message,
-        signedName: choice === "approve" ? signedName.trim() : "",
+        signedName:
+          choice === "approve" && (!isUnder18 || effectiveRole === "player")
+            ? signedName.trim()
+            : "",
         parentSignedName:
-          choice === "approve" && isUnder18 ? parentSignedName.trim() : "",
+          choice === "approve" && isUnder18 && effectiveRole === "parent"
+            ? parentSignedName.trim()
+            : "",
+        signerRole: isUnder18 ? effectiveRole : undefined,
       });
       if (res.ok) {
         setDone(choice);
@@ -109,11 +142,10 @@ export default function ResponseForm({
                 Parent or guardian signature required
               </p>
               <p className="text-xs text-muted-foreground">
-                Cooper Cricket has flagged this proposal as for a player under 18.
-                When you sign, your parent or guardian must also type their full
-                name to co-sign. They&apos;ll have received their own email about
-                this — if not, please make sure they review the proposal before
-                you sign.
+                Cooper Cricket has flagged this proposal as for a player under 18,
+                so it needs two signatures. The player and the parent or guardian
+                each sign separately using this same link, and the agreement is
+                only finalised once both have signed.
               </p>
             </div>
           </CardContent>
@@ -168,20 +200,77 @@ export default function ResponseForm({
                 Sign your name
               </div>
 
-              <SignatureField
-                id="player-signature"
-                label="Player&rsquo;s full legal name"
-                value={signedName}
-                onChange={setSignedName}
-              />
+              {!isUnder18 && (
+                <SignatureField
+                  id="player-signature"
+                  label="Player&rsquo;s full legal name"
+                  value={signedName}
+                  onChange={setSignedName}
+                />
+              )}
 
               {isUnder18 && (
-                <SignatureField
-                  id="parent-signature"
-                  label="Parent or guardian's full legal name"
-                  value={parentSignedName}
-                  onChange={setParentSignedName}
-                />
+                <>
+                  {parentTurnOnly && (
+                    <p className="rounded-md bg-success/10 px-3 py-2 text-xs text-foreground">
+                      The player has already signed. You&rsquo;re signing as the
+                      parent or guardian to complete the agreement.
+                    </p>
+                  )}
+                  {playerTurnOnly && (
+                    <p className="rounded-md bg-success/10 px-3 py-2 text-xs text-foreground">
+                      The parent or guardian has already signed. You&rsquo;re
+                      signing as the player to complete the agreement.
+                    </p>
+                  )}
+                  {!parentTurnOnly && !playerTurnOnly && (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                        Who&rsquo;s signing right now?
+                      </Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {(["player", "parent"] as const).map((r) => (
+                          <button
+                            key={r}
+                            type="button"
+                            onClick={() => setSignerRole(r)}
+                            className={`rounded-lg border px-3 py-2 text-sm font-medium transition-all ${
+                              signerRole === r
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "bg-background text-foreground hover:bg-accent"
+                            }`}
+                          >
+                            {r === "player"
+                              ? "I'm the player"
+                              : "I'm the parent / guardian"}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        The player and the parent/guardian each sign separately.
+                        Whoever isn&rsquo;t here yet can open this same link and
+                        sign their part later. The agreement is only finalised
+                        once both have signed.
+                      </p>
+                    </div>
+                  )}
+
+                  {effectiveRole === "player" ? (
+                    <SignatureField
+                      id="player-signature"
+                      label="Player&rsquo;s full legal name"
+                      value={signedName}
+                      onChange={setSignedName}
+                    />
+                  ) : (
+                    <SignatureField
+                      id="parent-signature"
+                      label="Parent or guardian&rsquo;s full legal name"
+                      value={parentSignedName}
+                      onChange={setParentSignedName}
+                    />
+                  )}
+                </>
               )}
 
               <div className="flex items-start gap-2 pt-2">
@@ -195,9 +284,11 @@ export default function ResponseForm({
                 <Label htmlFor="agree" className="text-xs leading-relaxed text-foreground">
                   By typing my name above and clicking{" "}
                   <strong>Approve &amp; Sign</strong>, I agree this serves as my
-                  electronic signature
-                  {isUnder18 ? " (and the parent or guardian's signature) " : " "}
-                  and that I am bound by the terms of this sponsorship proposal.
+                  electronic signature and that{" "}
+                  {isUnder18 && effectiveRole === "parent"
+                    ? "I, as parent or guardian, consent to and am bound by"
+                    : "I am bound by"}{" "}
+                  the terms of this sponsorship proposal.
                 </Label>
               </div>
             </div>

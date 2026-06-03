@@ -152,10 +152,13 @@ export type Database = {
           id: string
           items: Json
           notes: string
+          parent_signed_at: string | null
           parent_signed_name: string | null
           photo_provisions: boolean
           player_email: string
           player_name: string
+          player_signed_at: string | null
+          player_signed_name: string | null
           prepared_by_email: string
           prepared_by_name: string
           prepared_by_phone: string
@@ -183,10 +186,13 @@ export type Database = {
           id?: string
           items?: Json
           notes?: string
+          parent_signed_at?: string | null
           parent_signed_name?: string | null
           photo_provisions?: boolean
           player_email?: string
           player_name?: string
+          player_signed_at?: string | null
+          player_signed_name?: string | null
           prepared_by_email?: string
           prepared_by_name?: string
           prepared_by_phone?: string
@@ -214,10 +220,13 @@ export type Database = {
           id?: string
           items?: Json
           notes?: string
+          parent_signed_at?: string | null
           parent_signed_name?: string | null
           photo_provisions?: boolean
           player_email?: string
           player_name?: string
+          player_signed_at?: string | null
+          player_signed_name?: string | null
           prepared_by_email?: string
           prepared_by_name?: string
           prepared_by_phone?: string

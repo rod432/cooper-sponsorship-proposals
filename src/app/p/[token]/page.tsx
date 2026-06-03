@@ -91,11 +91,27 @@ export default async function PublicProposalPage({
         />
       )}
 
+      {proposal.status === "partially_signed" && (
+        <div className="rounded-lg border border-warning/40 bg-warning/5 p-4 text-sm print:hidden">
+          <p className="font-heading font-semibold text-foreground">
+            {proposal.player_signed_at
+              ? "Player signed — awaiting parent/guardian signature"
+              : "Parent/guardian signed — awaiting player signature"}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            This agreement is only finalised once both have signed. Whoever is
+            left can sign below using this same link.
+          </p>
+        </div>
+      )}
+
       {!finalised && (
         <ResponseForm
           token={token}
           defaultPlayerName={proposal.player_name}
           isUnder18={proposal.signed_under_18}
+          playerSigned={!!proposal.player_signed_at}
+          parentSigned={!!proposal.parent_signed_at}
         />
       )}
 
