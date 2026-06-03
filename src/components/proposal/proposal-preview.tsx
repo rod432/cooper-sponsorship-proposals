@@ -115,6 +115,35 @@ const ProposalPreview = (props: ProposalPreviewProps) => {
       </div>
 
       <div className="space-y-8 px-8 py-8">
+        {/* Welcome / intro — personalised greeting shown at the top of every
+            proposal (staff preview, player page, and print/PDF). Edit the copy
+            here to change it for all proposals. */}
+        <section className="space-y-3 text-sm leading-relaxed text-foreground">
+          <p className="font-heading text-lg font-semibold text-foreground">
+            {playerName ? `Hi ${playerName.split(" ")[0]},` : "Hi there,"}
+          </p>
+          <p>
+            We&rsquo;re thrilled to offer you a sponsorship with{" "}
+            {COMPANY.tradingName}
+            {dealDuration ? ` for the next ${dealDuration}` : ""}. We&rsquo;re a
+            proud family-owned business, and we&rsquo;ve worked incredibly hard
+            to stand shoulder to shoulder with the big brands &mdash; with a
+            genuinely different approach.
+          </p>
+          <p>
+            We&rsquo;ve pioneered exactness in cricket bat making: CNC-machined
+            handles and blades, paired with the clever use of AI, mean we can
+            craft exactly what you want and reproduce it time after time. No
+            guesswork &mdash; the bat you love, made the same way every single
+            time.
+          </p>
+          <p>
+            Please take a moment to read through everything we&rsquo;ve put
+            together for you below. We&rsquo;d love to have you on the team, and
+            we look forward to hearing from you.
+          </p>
+        </section>
+
         {/* Prepared for / Prepared by */}
         <div className="grid gap-6 sm:grid-cols-2">
           <div>
