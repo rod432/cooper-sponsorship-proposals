@@ -2,7 +2,7 @@ import Image from "next/image";
 import type { ProposalItem } from "./equipment-catalog-card";
 import type { SelectedTerm } from "./standard-terms-card";
 import { COMPANY, addressLines } from "@/lib/company-info";
-import { parseYears } from "@/lib/proposal-totals";
+import { parseYears, type Amendment } from "@/lib/proposal-totals";
 
 interface ProposalPreviewProps {
   playerName: string;
@@ -27,6 +27,7 @@ interface ProposalPreviewProps {
   isUnder18?: boolean;
   sentAt?: string | null;
   signedAt?: string | null;
+  amendments?: Amendment[];
 }
 
 const fmtMoney = (n: number) =>
@@ -58,6 +59,7 @@ const ProposalPreview = (props: ProposalPreviewProps) => {
     isUnder18,
     sentAt,
     signedAt,
+    amendments,
   } = props;
 
   const subtotal = items.reduce((sum, item) => {
@@ -388,6 +390,19 @@ const ProposalPreview = (props: ProposalPreviewProps) => {
             <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
               {notes}
             </p>
+          </Section>
+        )}
+
+        {/* Amendments — record of changes made after signing */}
+        {amendments && amendments.length > 0 && (
+          <Section title="Amendments">
+            <ul className="space-y-2">
+              {amendments.map((a, i) => (
+                <li key={i} className="text-sm leading-relaxed text-foreground">
+                  <span className="font-medium">{fmtDate(new Date(a.at))}:</span> {a.note}
+                </li>
+              ))}
+            </ul>
           </Section>
         )}
       </div>

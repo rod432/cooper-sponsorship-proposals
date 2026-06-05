@@ -1,5 +1,13 @@
 import type { ProposalItem } from "@/components/proposal/equipment-catalog-card";
 
+// A post-signature change to a proposal. Logged so the agreement keeps a record.
+export type Amendment = {
+  at: string;
+  note: string;
+  priorSignedName?: string | null;
+  priorSignedAt?: string | null;
+};
+
 export type ProposalTotals = {
   subtotal: number; // equipment value for one season/year
   years: number;
@@ -45,6 +53,7 @@ export const STATUS_LABELS: Record<string, string> = {
   approved: "Approved",
   declined: "Declined",
   changes_requested: "Changes Requested",
+  amended: "Amended, awaiting re-signature",
 };
 
 export const STATUS_BADGE_CLASSES: Record<string, string> = {
@@ -54,4 +63,5 @@ export const STATUS_BADGE_CLASSES: Record<string, string> = {
   approved: "bg-success/10 text-success",
   declined: "bg-destructive/10 text-destructive",
   changes_requested: "bg-warning/10 text-warning",
+  amended: "bg-warning/10 text-warning",
 };

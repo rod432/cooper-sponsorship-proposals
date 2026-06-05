@@ -143,6 +143,7 @@ export type Database = {
         Row: {
           additional_recipients: Json
           ai_image_rights: boolean
+          amendments: Json
           cash_incentive: number
           cash_per_year: boolean
           clauses: Json
@@ -179,6 +180,7 @@ export type Database = {
         Insert: {
           additional_recipients?: Json
           ai_image_rights?: boolean
+          amendments?: Json
           cash_incentive?: number
           cash_per_year?: boolean
           clauses?: Json
@@ -215,6 +217,7 @@ export type Database = {
         Update: {
           additional_recipients?: Json
           ai_image_rights?: boolean
+          amendments?: Json
           cash_incentive?: number
           cash_per_year?: boolean
           clauses?: Json

@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Copy, ExternalLink, Mail, ShieldCheck } from "lucide-react";
 import ProposalPreview from "./proposal-preview";
 import SendProposalDialog from "./send-proposal-dialog";
-import { STATUS_BADGE_CLASSES, STATUS_LABELS } from "@/lib/proposal-totals";
+import { STATUS_BADGE_CLASSES, STATUS_LABELS, type Amendment } from "@/lib/proposal-totals";
 import { buildExpiryInfo, COUNTDOWN_TONE_CLASSES } from "@/lib/expiry";
 import type { ProposalItem } from "./equipment-catalog-card";
 import type { SelectedTerm } from "./standard-terms-card";
@@ -48,6 +48,7 @@ interface Props {
   preparedByEmail: string;
   preparedByRole: string;
   preparedByPhone: string;
+  amendments: Amendment[];
 }
 
 export default function SendTab(props: Props) {
@@ -285,6 +286,7 @@ export default function SendTab(props: Props) {
         isUnder18={props.signedUnder18}
         sentAt={props.sentAt}
         signedAt={props.signedAt}
+        amendments={props.amendments}
       />
 
       <SendProposalDialog

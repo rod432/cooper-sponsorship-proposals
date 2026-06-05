@@ -30,8 +30,12 @@ import PreparedByDialog, {
 } from "@/components/proposal/prepared-by-dialog";
 import { Button } from "@/components/ui/button";
 import { Eye, Mail, Save, Settings } from "lucide-react";
-import { STATUS_BADGE_CLASSES, STATUS_LABELS } from "@/lib/proposal-totals";
-import type { Json } from "@/lib/supabase/types";
+import {
+  STATUS_BADGE_CLASSES,
+  STATUS_LABELS,
+  type Amendment,
+} from "@/lib/proposal-totals";
+import type { Json, TablesUpdate } from "@/lib/supabase/types";
 
 interface ProposalState {
   playerName: string;
@@ -63,6 +67,7 @@ interface ProposalState {
   parentSignedName: string | null;
   publicToken: string | null;
   status: string;
+  amendments: Amendment[];
 }
 
 const defaultState: ProposalState = {
@@ -94,6 +99,7 @@ const defaultState: ProposalState = {
   parentSignedName: null,
   publicToken: null,
   status: "draft",
+  amendments: [],
 };
 
 export default function CreateProposalView() {
@@ -107,6 +113,11 @@ export default function CreateProposalView() {
   const [persistedId, setPersistedId] = useState<string | null>(editIdFromUrl);
   const [sendOpen, setSendOpen] = useState(false);
   const [preparedByOpen, setPreparedByOpen] = useState(false);
+  const [amendmentNote, setAmendmentNote] = useState("");
+
+  // True once the proposal has at least one signature on file.
+  const isSigned =
+    state.status === "approved" || state.status === "partially_signed";
   // True until the user has explicitly chosen a Prepared-by — once they do
   // (or once we load an existing proposal), we stop auto-overwriting from
   // the signed-in user's profile.
@@ -186,6 +197,7 @@ export default function CreateProposalView() {
         parentSignedName: data.parent_signed_name,
         publicToken: data.public_token,
         status: data.status,
+        amendments: (data.amendments as unknown as Amendment[]) ?? [],
       });
       setPersistedId(data.id);
       setLoaded(true);
@@ -235,15 +247,48 @@ export default function CreateProposalView() {
       if (persistedId) {
         const { data: current } = await supabase
           .from("proposals")
-          .select("version")
+          .select("version, status, signed_name, signed_at")
           .eq("id", persistedId)
           .single();
+        const wasSigned =
+          current?.status === "approved" || current?.status === "partially_signed";
+
+        let updatePayload: TablesUpdate<"proposals"> = {
+          ...payload,
+          version: (current?.version ?? 1) + 1,
+        };
+
+        if (wasSigned) {
+          // Editing a signed agreement = an amendment. Record it, clear the
+          // signatures and re-open it for re-signing so the signature always
+          // matches the document.
+          const nowIso = new Date().toISOString();
+          const entry: Amendment = {
+            at: nowIso,
+            note: amendmentNote.trim() || "Proposal amended",
+            priorSignedName: current?.signed_name ?? null,
+            priorSignedAt: current?.signed_at ?? null,
+          };
+          updatePayload = {
+            ...updatePayload,
+            amendments: [...state.amendments, entry] as unknown as Json,
+            status: "amended",
+            signed_name: null,
+            signed_at: null,
+            player_signed_name: null,
+            player_signed_at: null,
+            parent_signed_name: null,
+            parent_signed_at: null,
+            expires_at: null,
+          };
+        }
+
         const { error } = await supabase
           .from("proposals")
-          .update({ ...payload, version: (current?.version ?? 1) + 1 })
+          .update(updatePayload)
           .eq("id", persistedId);
         if (error) throw error;
-        return persistedId;
+        return { id: persistedId, amended: wasSigned };
       } else {
         const { data, error } = await supabase
           .from("proposals")
@@ -251,14 +296,41 @@ export default function CreateProposalView() {
           .select("id")
           .single();
         if (error) throw error;
-        return data.id;
+        return { id: data.id, amended: false };
       }
     },
-    onSuccess: (id) => {
-      setPersistedId(id);
+    onSuccess: (res) => {
+      setPersistedId(res.id);
+      if (res.amended) {
+        const nowIso = new Date().toISOString();
+        setState((s) => ({
+          ...s,
+          status: "amended",
+          signedName: null,
+          parentSignedName: null,
+          signedAt: null,
+          expiresAt: null,
+          amendments: [
+            ...s.amendments,
+            {
+              at: nowIso,
+              note: amendmentNote.trim() || "Proposal amended",
+              priorSignedName: s.signedName,
+              priorSignedAt: s.signedAt,
+            },
+          ],
+        }));
+        setAmendmentNote("");
+        toast({
+          title: "Amendment saved",
+          description: "The player needs to re-sign. Re-send them the link.",
+        });
+        setSendOpen(true);
+        return;
+      }
       toast({ title: persistedId ? "Proposal updated" : "Proposal saved" });
       if (!editIdFromUrl) {
-        router.replace(`/?editId=${id}`);
+        router.replace(`/?editId=${res.id}`);
       }
     },
     onError: (e: Error) => {
@@ -348,6 +420,28 @@ export default function CreateProposalView() {
 
       {activeTab === "Edit" && (
         <div className="space-y-4">
+          {isSigned && (
+            <div className="rounded-lg border border-warning/40 bg-warning/5 p-4">
+              <p className="font-heading text-sm font-semibold text-foreground">
+                This agreement is already signed
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Any change you save will be recorded as an amendment and the player (and
+                parent/guardian, if under 18) will need to re-sign. The original signature is kept in
+                the history.
+              </p>
+              <label className="mt-3 block text-xs font-medium text-foreground">
+                What is changing? (recorded on the agreement)
+                <input
+                  type="text"
+                  value={amendmentNote}
+                  onChange={(e) => setAmendmentNote(e.target.value)}
+                  placeholder="e.g. Added a playing bag at no charge"
+                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                />
+              </label>
+            </div>
+          )}
           <PlayerDetailsCard
             playerName={state.playerName}
             playerEmail={state.playerEmail}
@@ -412,10 +506,19 @@ export default function CreateProposalView() {
               <Button
                 variant="outline"
                 onClick={() => saveMutation.mutate()}
-                disabled={saveMutation.isPending}
+                disabled={saveMutation.isPending || (isSigned && !amendmentNote.trim())}
+                title={
+                  isSigned && !amendmentNote.trim()
+                    ? "Add an amendment note to save changes"
+                    : ""
+                }
               >
                 <Save className="mr-1.5 h-4 w-4" />
-                {saveMutation.isPending ? "Saving…" : "Save"}
+                {saveMutation.isPending
+                  ? "Saving…"
+                  : isSigned
+                    ? "Save amendment (re-sign required)"
+                    : "Save"}
               </Button>
               <Button variant="outline" onClick={() => setActiveTab("Preview")}>
                 <Eye className="mr-1.5 h-4 w-4" />
@@ -463,6 +566,7 @@ export default function CreateProposalView() {
           isUnder18={state.isUnder18}
           sentAt={state.sentAt}
           signedAt={state.signedAt}
+          amendments={state.amendments}
         />
       )}
 
@@ -497,6 +601,7 @@ export default function CreateProposalView() {
           preparedByEmail={state.preparedByEmail}
           preparedByRole={state.preparedByRole}
           preparedByPhone={state.preparedByPhone}
+          amendments={state.amendments}
         />
       )}
 

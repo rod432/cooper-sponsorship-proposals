@@ -6,7 +6,11 @@ import type { SelectedTerm } from "@/components/proposal/standard-terms-card";
 import ResponseForm from "./response-form";
 import SignedFooter from "./signed-footer";
 import PrintLock from "./print-lock";
-import { STATUS_BADGE_CLASSES, STATUS_LABELS } from "@/lib/proposal-totals";
+import {
+  STATUS_BADGE_CLASSES,
+  STATUS_LABELS,
+  type Amendment,
+} from "@/lib/proposal-totals";
 
 export const dynamic = "force-dynamic";
 
@@ -81,6 +85,7 @@ export default async function PublicProposalPage({
         isUnder18={proposal.signed_under_18}
         sentAt={proposal.sent_at}
         signedAt={proposal.signed_at}
+        amendments={(proposal.amendments as unknown as Amendment[]) ?? []}
       />
 
       {isApproved && (
@@ -91,6 +96,18 @@ export default async function PublicProposalPage({
           signedAt={proposal.signed_at}
           expiresAt={proposal.expires_at}
         />
+      )}
+
+      {proposal.status === "amended" && (
+        <div className="rounded-lg border border-warning/40 bg-warning/5 p-4 text-sm print:hidden">
+          <p className="font-heading font-semibold text-foreground">
+            This proposal has been updated and needs your signature again
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Cooper Cricket has made a change to your agreement (see the Amendments section above).
+            Please review and sign below to confirm the updated terms.
+          </p>
+        </div>
       )}
 
       {proposal.status === "partially_signed" && (
