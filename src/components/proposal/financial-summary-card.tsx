@@ -12,6 +12,7 @@ interface Props {
   discountPercent: number;
   cashIncentive: number;
   cashPerYear: boolean;
+  earlyExitFee: number;
   onChange: (field: string, value: number | boolean) => void;
 }
 
@@ -21,6 +22,7 @@ const FinancialSummaryCard = ({
   discountPercent,
   cashIncentive,
   cashPerYear,
+  earlyExitFee,
   onChange,
 }: Props) => {
   const subtotal = items.reduce((sum, item) => {
@@ -95,6 +97,21 @@ const FinancialSummaryCard = ({
         <div className="border-t pt-3">
           <Row label="Total Sponsorship Value" value={totalValue} bold />
         </div>
+
+        <div className="flex items-center gap-3 border-t pt-3">
+          <Label className="shrink-0 text-sm">Early exit fee $</Label>
+          <Input
+            type="number"
+            className="h-8 w-28 font-mono text-sm"
+            min={0}
+            value={earlyExitFee}
+            onChange={(e) => onChange("earlyExitFee", Number(e.target.value))}
+          />
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Applies only if the player leaves before the term ends. Not part of the total above. Leave
+          at 0 for no exit fee.
+        </p>
       </CardContent>
     </Card>
   );

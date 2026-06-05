@@ -43,6 +43,7 @@ interface ProposalState {
   discountPercent: number;
   cashIncentive: number;
   cashPerYear: boolean;
+  earlyExitFee: number;
   clauses: string[];
   aiImageRights: boolean;
   photoProvisions: boolean;
@@ -74,6 +75,7 @@ const defaultState: ProposalState = {
   discountPercent: 0,
   cashIncentive: 0,
   cashPerYear: false,
+  earlyExitFee: 0,
   clauses: [],
   aiImageRights: false,
   photoProvisions: false,
@@ -165,6 +167,7 @@ export default function CreateProposalView() {
         discountPercent: Number(data.discount_percent),
         cashIncentive: Number(data.cash_incentive),
         cashPerYear: data.cash_per_year ?? false,
+        earlyExitFee: Number(data.early_exit_fee ?? 0),
         clauses: data.clauses as unknown as string[],
         aiImageRights: data.ai_image_rights,
         photoProvisions: data.photo_provisions,
@@ -217,6 +220,7 @@ export default function CreateProposalView() {
         discount_percent: state.discountPercent,
         cash_incentive: state.cashIncentive,
         cash_per_year: state.cashPerYear,
+        early_exit_fee: state.earlyExitFee,
         clauses: state.clauses as unknown as Json,
         ai_image_rights: state.aiImageRights,
         photo_provisions: state.photoProvisions,
@@ -370,6 +374,7 @@ export default function CreateProposalView() {
             discountPercent={state.discountPercent}
             cashIncentive={state.cashIncentive}
             cashPerYear={state.cashPerYear}
+            earlyExitFee={state.earlyExitFee}
             onChange={(f, v) =>
               update(f as keyof ProposalState, v as ProposalState[keyof ProposalState])
             }
@@ -443,6 +448,7 @@ export default function CreateProposalView() {
           discountPercent={state.discountPercent}
           cashIncentive={state.cashIncentive}
           cashPerYear={state.cashPerYear}
+          earlyExitFee={state.earlyExitFee}
           clauses={state.clauses}
           aiImageRights={state.aiImageRights}
           photoProvisions={state.photoProvisions}
@@ -480,6 +486,7 @@ export default function CreateProposalView() {
           discountPercent={state.discountPercent}
           cashIncentive={state.cashIncentive}
           cashPerYear={state.cashPerYear}
+          earlyExitFee={state.earlyExitFee}
           clauses={state.clauses}
           aiImageRights={state.aiImageRights}
           photoProvisions={state.photoProvisions}

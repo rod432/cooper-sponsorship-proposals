@@ -11,6 +11,7 @@ interface ProposalPreviewProps {
   discountPercent: number;
   cashIncentive: number;
   cashPerYear?: boolean;
+  earlyExitFee?: number;
   clauses: string[];
   aiImageRights: boolean;
   photoProvisions: boolean;
@@ -42,6 +43,7 @@ const ProposalPreview = (props: ProposalPreviewProps) => {
     discountPercent,
     cashIncentive,
     cashPerYear,
+    earlyExitFee,
     clauses,
     aiImageRights,
     photoProvisions,
@@ -324,6 +326,19 @@ const ProposalPreview = (props: ProposalPreviewProps) => {
               The Player agrees to participate in photo sessions as reasonably
               requested by Cooper Cricket. All promotional images will be submitted to
               the Player for approval prior to public use.
+            </p>
+          </Section>
+        )}
+
+        {/* Early Exit — only when a fee is set */}
+        {typeof earlyExitFee === "number" && earlyExitFee > 0 && (
+          <Section title="Early Exit">
+            <p className="text-sm leading-relaxed text-foreground">
+              This sponsorship is a commitment for the full term. If the Player chooses to end the
+              agreement before the end of the term (for example to sign with another brand), an early
+              exit fee of {fmtMoney(earlyExitFee)} applies. This reflects the real cost to Cooper
+              Cricket of the equipment provided, along with the marketing and time invested in the
+              partnership.
             </p>
           </Section>
         )}
