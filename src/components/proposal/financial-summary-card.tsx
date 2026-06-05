@@ -18,9 +18,9 @@ const FinancialSummaryCard = ({ items, discountPercent, cashIncentive, onChange 
     return sum + (item.basePrice + specTotal) * item.quantity;
   }, 0);
 
-  const discountAmount = subtotal * (discountPercent / 100);
-  const afterDiscount = subtotal - discountAmount;
-  const totalValue = afterDiscount + cashIncentive;
+  // The discount is a perk on additional gear the player may buy; it does not
+  // reduce the sponsored-equipment value, so the total is gear + cash only.
+  const totalValue = subtotal + cashIncentive;
 
   const Row = ({ label, value, bold }: { label: string; value: number; bold?: boolean }) => (
     <div className={`flex justify-between ${bold ? "font-semibold text-foreground" : "text-sm text-muted-foreground"}`}>
@@ -33,9 +33,9 @@ const FinancialSummaryCard = ({ items, discountPercent, cashIncentive, onChange 
     <Card>
       <CardHeader><CardTitle className="text-lg">Financial Summary</CardTitle></CardHeader>
       <CardContent className="space-y-3">
-        <Row label="Equipment Subtotal" value={subtotal} />
+        <Row label="Sponsored Equipment Value" value={subtotal} />
         <div className="flex items-center gap-3">
-          <Label className="shrink-0 text-sm">Discount %</Label>
+          <Label className="shrink-0 text-sm">Extra gear discount %</Label>
           <Input
             type="number"
             className="h-8 w-20 font-mono text-sm"
@@ -44,8 +44,9 @@ const FinancialSummaryCard = ({ items, discountPercent, cashIncentive, onChange 
             onChange={(e) => onChange("discountPercent", Number(e.target.value))}
           />
         </div>
-        <Row label="Discount Amount" value={discountAmount} />
-        <Row label="After Discount" value={afterDiscount} />
+        <p className="text-xs text-muted-foreground">
+          Off any additional gear the player buys. This does NOT reduce the sponsorship total below.
+        </p>
         <div className="flex items-center gap-3">
           <Label className="shrink-0 text-sm">Cash Incentive $</Label>
           <Input

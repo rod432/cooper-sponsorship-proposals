@@ -59,9 +59,9 @@ const ProposalPreview = (props: ProposalPreviewProps) => {
     const specTotal = Object.values(item.specs).reduce((s, sp) => s + sp.price, 0);
     return sum + (item.basePrice + specTotal) * item.quantity;
   }, 0);
-  const discountAmount = subtotal * (discountPercent / 100);
-  const afterDiscount = subtotal - discountAmount;
-  const totalValue = afterDiscount + cashIncentive;
+  // The sponsored equipment is the deal. The discount is a separate perk on any
+  // extra gear the player buys, so it does not reduce the total value below.
+  const totalValue = subtotal + cashIncentive;
 
   // Group items by category for nicer presentation.
   const grouped = items.reduce<Record<string, ProposalItem[]>>((acc, item) => {
@@ -250,16 +250,7 @@ const ProposalPreview = (props: ProposalPreviewProps) => {
         {/* Financial Summary */}
         <Section title="Financial Summary">
           <div className="rounded-lg border bg-secondary/20 px-4 py-3">
-            <FinRow label="Equipment subtotal" value={fmtMoney(subtotal)} />
-            {discountPercent > 0 && (
-              <>
-                <FinRow
-                  label={`Discount (${discountPercent}%)`}
-                  value={`-${fmtMoney(discountAmount)}`}
-                />
-                <FinRow label="After discount" value={fmtMoney(afterDiscount)} />
-              </>
-            )}
+            <FinRow label="Sponsored equipment value" value={fmtMoney(subtotal)} />
             {cashIncentive > 0 && (
               <FinRow label="Cash incentive" value={fmtMoney(cashIncentive)} />
             )}
@@ -270,6 +261,13 @@ const ProposalPreview = (props: ProposalPreviewProps) => {
             </span>
             <span className="font-mono text-lg font-bold">{fmtMoney(totalValue)}</span>
           </div>
+          {discountPercent > 0 && (
+            <p className="mt-3 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-foreground">
+              <span className="font-semibold">Plus {discountPercent}% off additional gear.</span>{" "}
+              On top of the equipment above, you&rsquo;ll receive {discountPercent}% off any
+              additional Cooper Cricket gear you choose to buy during the sponsorship term.
+            </p>
+          )}
         </Section>
 
         {/* Special Clauses */}
