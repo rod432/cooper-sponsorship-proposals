@@ -23,6 +23,7 @@ import {
   STATUS_BADGE_CLASSES,
   STATUS_LABELS,
   calcProposalTotals,
+  parseYears,
 } from "@/lib/proposal-totals";
 import { buildExpiryInfo, COUNTDOWN_TONE_CLASSES } from "@/lib/expiry";
 import type { ProposalItem } from "@/components/proposal/equipment-catalog-card";
@@ -164,6 +165,8 @@ export default function ProposalsPage() {
               items,
               Number(p.discount_percent),
               Number(p.cash_incentive),
+              parseYears(p.deal_duration),
+              Boolean(p.cash_per_year),
             );
             const responses = p.proposal_responses ?? [];
             const latestResponse = responses.length

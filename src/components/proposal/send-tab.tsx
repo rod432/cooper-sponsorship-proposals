@@ -36,6 +36,7 @@ interface Props {
   items: ProposalItem[];
   discountPercent: number;
   cashIncentive: number;
+  cashPerYear: boolean;
   clauses: string[];
   aiImageRights: boolean;
   photoProvisions: boolean;
@@ -267,6 +268,7 @@ export default function SendTab(props: Props) {
         items={props.items}
         discountPercent={props.discountPercent}
         cashIncentive={props.cashIncentive}
+        cashPerYear={props.cashPerYear}
         clauses={props.clauses}
         aiImageRights={props.aiImageRights}
         photoProvisions={props.photoProvisions}

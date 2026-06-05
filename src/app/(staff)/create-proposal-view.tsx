@@ -42,6 +42,7 @@ interface ProposalState {
   items: ProposalItem[];
   discountPercent: number;
   cashIncentive: number;
+  cashPerYear: boolean;
   clauses: string[];
   aiImageRights: boolean;
   photoProvisions: boolean;
@@ -72,6 +73,7 @@ const defaultState: ProposalState = {
   items: [],
   discountPercent: 0,
   cashIncentive: 0,
+  cashPerYear: false,
   clauses: [],
   aiImageRights: false,
   photoProvisions: false,
@@ -162,6 +164,7 @@ export default function CreateProposalView() {
         })),
         discountPercent: Number(data.discount_percent),
         cashIncentive: Number(data.cash_incentive),
+        cashPerYear: data.cash_per_year ?? false,
         clauses: data.clauses as unknown as string[],
         aiImageRights: data.ai_image_rights,
         photoProvisions: data.photo_provisions,
@@ -213,6 +216,7 @@ export default function CreateProposalView() {
         items: state.items as unknown as Json,
         discount_percent: state.discountPercent,
         cash_incentive: state.cashIncentive,
+        cash_per_year: state.cashPerYear,
         clauses: state.clauses as unknown as Json,
         ai_image_rights: state.aiImageRights,
         photo_provisions: state.photoProvisions,
@@ -362,8 +366,10 @@ export default function CreateProposalView() {
           />
           <FinancialSummaryCard
             items={state.items}
+            dealDuration={state.dealDuration}
             discountPercent={state.discountPercent}
             cashIncentive={state.cashIncentive}
+            cashPerYear={state.cashPerYear}
             onChange={(f, v) =>
               update(f as keyof ProposalState, v as ProposalState[keyof ProposalState])
             }
@@ -436,6 +442,7 @@ export default function CreateProposalView() {
           items={state.items}
           discountPercent={state.discountPercent}
           cashIncentive={state.cashIncentive}
+          cashPerYear={state.cashPerYear}
           clauses={state.clauses}
           aiImageRights={state.aiImageRights}
           photoProvisions={state.photoProvisions}
@@ -472,6 +479,7 @@ export default function CreateProposalView() {
           items={state.items}
           discountPercent={state.discountPercent}
           cashIncentive={state.cashIncentive}
+          cashPerYear={state.cashPerYear}
           clauses={state.clauses}
           aiImageRights={state.aiImageRights}
           photoProvisions={state.photoProvisions}

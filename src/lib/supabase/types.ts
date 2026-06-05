@@ -144,6 +144,7 @@ export type Database = {
           additional_recipients: Json
           ai_image_rights: boolean
           cash_incentive: number
+          cash_per_year: boolean
           clauses: Json
           created_at: string
           deal_duration: string
@@ -178,6 +179,7 @@ export type Database = {
           additional_recipients?: Json
           ai_image_rights?: boolean
           cash_incentive?: number
+          cash_per_year?: boolean
           clauses?: Json
           created_at?: string
           deal_duration?: string
@@ -212,6 +214,7 @@ export type Database = {
           additional_recipients?: Json
           ai_image_rights?: boolean
           cash_incentive?: number
+          cash_per_year?: boolean
           clauses?: Json
           created_at?: string
           deal_duration?: string

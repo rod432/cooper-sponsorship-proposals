@@ -65,6 +65,7 @@ export default async function PublicProposalPage({
         items={items}
         discountPercent={Number(proposal.discount_percent)}
         cashIncentive={Number(proposal.cash_incentive)}
+        cashPerYear={proposal.cash_per_year}
         clauses={clauses}
         aiImageRights={proposal.ai_image_rights}
         photoProvisions={proposal.photo_provisions}

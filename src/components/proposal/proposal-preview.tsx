@@ -2,6 +2,7 @@ import Image from "next/image";
 import type { ProposalItem } from "./equipment-catalog-card";
 import type { SelectedTerm } from "./standard-terms-card";
 import { COMPANY, addressLines } from "@/lib/company-info";
+import { parseYears } from "@/lib/proposal-totals";
 
 interface ProposalPreviewProps {
   playerName: string;
@@ -9,6 +10,7 @@ interface ProposalPreviewProps {
   items: ProposalItem[];
   discountPercent: number;
   cashIncentive: number;
+  cashPerYear?: boolean;
   clauses: string[];
   aiImageRights: boolean;
   photoProvisions: boolean;
@@ -39,6 +41,7 @@ const ProposalPreview = (props: ProposalPreviewProps) => {
     items,
     discountPercent,
     cashIncentive,
+    cashPerYear,
     clauses,
     aiImageRights,
     photoProvisions,
@@ -59,9 +62,14 @@ const ProposalPreview = (props: ProposalPreviewProps) => {
     const specTotal = Object.values(item.specs).reduce((s, sp) => s + sp.price, 0);
     return sum + (item.basePrice + specTotal) * item.quantity;
   }, 0);
-  // The sponsored equipment is the deal. The discount is a separate perk on any
+  // The sponsored equipment is the deal and is refreshed each season, so it
+  // counts for every year of the term. The discount is a separate perk on any
   // extra gear the player buys, so it does not reduce the total value below.
-  const totalValue = subtotal + cashIncentive;
+  const years = parseYears(dealDuration);
+  const multiYear = years > 1;
+  const gearTotal = subtotal * years;
+  const cashTotal = cashPerYear ? cashIncentive * years : cashIncentive;
+  const totalValue = gearTotal + cashTotal;
 
   // Group items by category for nicer presentation.
   const grouped = items.reduce<Record<string, ProposalItem[]>>((acc, item) => {
@@ -250,9 +258,25 @@ const ProposalPreview = (props: ProposalPreviewProps) => {
         {/* Financial Summary */}
         <Section title="Financial Summary">
           <div className="rounded-lg border bg-secondary/20 px-4 py-3">
-            <FinRow label="Sponsored equipment value" value={fmtMoney(subtotal)} />
+            <FinRow
+              label={multiYear ? "Equipment value (per season)" : "Sponsored equipment value"}
+              value={fmtMoney(subtotal)}
+            />
+            {multiYear && (
+              <FinRow
+                label={`Equipment over ${years} seasons (refreshed each year)`}
+                value={fmtMoney(gearTotal)}
+              />
+            )}
             {cashIncentive > 0 && (
-              <FinRow label="Cash incentive" value={fmtMoney(cashIncentive)} />
+              <FinRow
+                label={
+                  cashPerYear && multiYear
+                    ? `Cash incentive (${fmtMoney(cashIncentive)} × ${years} seasons)`
+                    : "Cash incentive"
+                }
+                value={fmtMoney(cashTotal)}
+              />
             )}
           </div>
           <div className="mt-3 flex items-center justify-between rounded-lg bg-primary px-4 py-3 text-primary-foreground">
@@ -303,6 +327,16 @@ const ProposalPreview = (props: ProposalPreviewProps) => {
             </p>
           </Section>
         )}
+
+        {/* Representative Honours — standard on every proposal */}
+        <Section title="Representative Honours">
+          <p className="text-sm leading-relaxed text-foreground">
+            If during the term the Player is selected for a higher representative level (for example
+            state, national, or professional selection), Cooper Cricket and the Player agree to
+            review and renegotiate this agreement in good faith to reflect the Player&rsquo;s new
+            profile.
+          </p>
+        </Section>
 
         {/* Standard Terms */}
         {selectedTerms.length > 0 && (
