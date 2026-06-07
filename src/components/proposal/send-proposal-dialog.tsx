@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import {
   Dialog,
   DialogContent,
@@ -91,6 +91,18 @@ export default function SendProposalDialog({
           ? "player_parents"
           : "player";
   const [scenario, setScenario] = useState<Scenario>(defaultScenario);
+
+  // Each time the dialog opens, re-sync from the current proposal. The player
+  // email is only captured into state on mount, and on an existing proposal the
+  // data loads after mount, so without this the field would open empty.
+  useEffect(() => {
+    if (open) {
+      setEmail(initialEmail);
+      setScenario(defaultScenario);
+      setResult(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const includePlayer = scenario !== "manager";
   const scenarioRecipients =
