@@ -2,8 +2,44 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { Resend } from "resend";
 import type { TablesUpdate } from "@/lib/supabase/types";
 import { addYearsIso, parseYearsFromDuration } from "@/lib/expiry";
+import { COMPANY } from "@/lib/company-info";
+
+// Notify staff (info@coopercricket.com.au) when a recipient responds, so they
+// know the next step. Best-effort: never blocks or fails the player's action.
+async function notifyStaff(opts: {
+  playerName: string;
+  reference: string | null;
+  event: string;
+  message?: string;
+}) {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) return;
+  const to = process.env.STAFF_NOTIFY_EMAIL || COMPANY.email;
+  const from =
+    process.env.RESEND_FROM_ADDRESS ||
+    `${COMPANY.tradingName} <proposals@coopercricket.com.au>`;
+  const base = process.env.NEXT_PUBLIC_SITE_URL || "https://sponsorship.coopercricket.com.au";
+  const who = `${opts.playerName || "A player"}${opts.reference ? ` (${opts.reference})` : ""}`;
+  const lines = [
+    `${who}: ${opts.event}.`,
+    opts.message ? `\nTheir note:\n${opts.message}` : "",
+    `\nReview it: ${base}/proposals`,
+  ].filter(Boolean);
+  try {
+    const resend = new Resend(key);
+    await resend.emails.send({
+      from,
+      to,
+      subject: `Proposal ${opts.event}: ${opts.playerName || "player"}`,
+      text: lines.join("\n"),
+    });
+  } catch (e) {
+    console.error("staff notify failed", e);
+  }
+}
 
 const STATUS_FROM_RESPONSE: Record<string, string> = {
   approve: "approved",
@@ -45,7 +81,7 @@ export async function submitResponse(input: Input) {
   const { data: proposal, error: fetchErr } = await supabase
     .from("proposals")
     .select(
-      "id, status, deal_duration, signed_under_18, player_signed_name, player_signed_at, parent_signed_name, parent_signed_at",
+      "id, status, deal_duration, signed_under_18, player_name, reference, player_signed_name, player_signed_at, parent_signed_name, parent_signed_at",
     )
     .eq("public_token", token)
     .single();
@@ -83,6 +119,13 @@ export async function submitResponse(input: Input) {
       .update({ status: STATUS_FROM_RESPONSE[responseType] })
       .eq("id", proposal.id);
     if (updateErr) return { ok: false, error: updateErr.message };
+
+    await notifyStaff({
+      playerName: proposal.player_name,
+      reference: proposal.reference,
+      event: responseType === "decline" ? "declined the proposal" : "requested changes",
+      message: trimmedMessage,
+    });
 
     revalidatePath(`/p/${token}`);
     return { ok: true };
@@ -159,6 +202,14 @@ export async function submitResponse(input: Input) {
     .update(update)
     .eq("id", proposal.id);
   if (updateErr) return { ok: false, error: updateErr.message };
+
+  await notifyStaff({
+    playerName: proposal.player_name,
+    reference: proposal.reference,
+    event: fullySigned
+      ? "signed and approved the proposal"
+      : `signed (${role === "parent" ? "parent/guardian" : "player"}), awaiting co-signature`,
+  });
 
   revalidatePath(`/p/${token}`);
   return { ok: true };
