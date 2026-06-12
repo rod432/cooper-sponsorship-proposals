@@ -26,6 +26,13 @@ const SENDER =
   process.env.RESEND_FROM_ADDRESS ||
   `${COMPANY.tradingName} <proposals@coopercricket.com.au>`;
 
+// Every outgoing email is BCC'd here for a full team paper trail (minus anyone
+// already on the To line). Override with EMAIL_BCC (comma-separated).
+const BCC = (process.env.EMAIL_BCC ?? "info@coopercricket.com.au,rod@coopercricket.com.au")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+
 const PARENT_ROLES = new Set(["parent", "guardian"]);
 
 async function inferBaseUrl(): Promise<string> {
@@ -372,13 +379,19 @@ export async function sendProposal(
   if (process.env.RESEND_API_KEY) {
     try {
       const resend = new Resend(process.env.RESEND_API_KEY);
-      const payloads = sends.map((s) => ({
-        from: SENDER,
-        to: s.to,
-        subject: s.subject,
-        text: s.text,
-        html: s.html,
-      }));
+      const payloads = sends.map((s) => {
+        const bcc = BCC.filter(
+          (b) => !s.to.some((t) => t.trim().toLowerCase() === b.toLowerCase()),
+        );
+        return {
+          from: SENDER,
+          to: s.to,
+          ...(bcc.length ? { bcc } : {}),
+          subject: s.subject,
+          text: s.text,
+          html: s.html,
+        };
+      });
 
       // Resend's free tier is 2 requests/sec — N parallel sends blow past it
       // when there are 3+ recipients. The batch API delivers up to 100

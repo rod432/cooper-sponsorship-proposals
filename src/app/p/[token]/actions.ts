@@ -7,6 +7,17 @@ import type { TablesUpdate } from "@/lib/supabase/types";
 import { addYearsIso, parseYearsFromDuration } from "@/lib/expiry";
 import { COMPANY } from "@/lib/company-info";
 
+// Every outgoing email is BCC'd here for a full team paper trail (minus anyone
+// already on the To line). Override with EMAIL_BCC (comma-separated).
+const BCC = (process.env.EMAIL_BCC ?? "info@coopercricket.com.au,rod@coopercricket.com.au")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+function bccMinus(to: string | string[]): string[] {
+  const toList = Array.isArray(to) ? to : [to];
+  return BCC.filter((b) => !toList.some((t) => t.trim().toLowerCase() === b.toLowerCase()));
+}
+
 // Notify staff (info@coopercricket.com.au) when a recipient responds, so they
 // know the next step. Best-effort: never blocks or fails the player's action.
 async function notifyStaff(opts: {
@@ -30,9 +41,11 @@ async function notifyStaff(opts: {
   ].filter(Boolean);
   try {
     const resend = new Resend(key);
+    const bcc = bccMinus(to);
     await resend.emails.send({
       from,
       to,
+      ...(bcc.length ? { bcc } : {}),
       subject: `Proposal ${opts.event}: ${opts.playerName || "player"}`,
       text: lines.join("\n"),
     });
@@ -56,9 +69,11 @@ async function notifyPlayerSigned(opts: {
   const text = `Hi ${first},\n\nThank you for signing your Cooper Cricket sponsorship agreement${opts.reference ? ` (${opts.reference})` : ""}. It is now locked in and a copy is kept on file.\n\nWe are thrilled to have you on board and we will be in touch about your gear and next steps.\n\nWelcome to the team,\nThe Cooper Cricket team`;
   try {
     const resend = new Resend(key);
+    const bcc = bccMinus(opts.to);
     await resend.emails.send({
       from,
       to: opts.to,
+      ...(bcc.length ? { bcc } : {}),
       subject: "Your Cooper Cricket sponsorship is signed",
       text,
     });
