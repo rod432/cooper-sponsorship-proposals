@@ -41,6 +41,32 @@ async function notifyStaff(opts: {
   }
 }
 
+// Confirmation to the player once their proposal is fully signed. Best-effort.
+async function notifyPlayerSigned(opts: {
+  to: string;
+  playerName: string;
+  reference: string | null;
+}) {
+  const key = process.env.RESEND_API_KEY;
+  if (!key || !opts.to.trim()) return;
+  const from =
+    process.env.RESEND_FROM_ADDRESS ||
+    `${COMPANY.tradingName} <proposals@coopercricket.com.au>`;
+  const first = (opts.playerName || "there").split(" ")[0];
+  const text = `Hi ${first},\n\nThank you for signing your Cooper Cricket sponsorship agreement${opts.reference ? ` (${opts.reference})` : ""}. It is now locked in and a copy is kept on file.\n\nWe are thrilled to have you on board and we will be in touch about your gear and next steps.\n\nWelcome to the team,\nThe Cooper Cricket team`;
+  try {
+    const resend = new Resend(key);
+    await resend.emails.send({
+      from,
+      to: opts.to,
+      subject: "Your Cooper Cricket sponsorship is signed",
+      text,
+    });
+  } catch (e) {
+    console.error("player notify failed", e);
+  }
+}
+
 const STATUS_FROM_RESPONSE: Record<string, string> = {
   approve: "approved",
   decline: "declined",
@@ -81,7 +107,7 @@ export async function submitResponse(input: Input) {
   const { data: proposal, error: fetchErr } = await supabase
     .from("proposals")
     .select(
-      "id, status, deal_duration, signed_under_18, player_name, reference, player_signed_name, player_signed_at, parent_signed_name, parent_signed_at",
+      "id, status, deal_duration, signed_under_18, player_name, player_email, reference, player_signed_name, player_signed_at, parent_signed_name, parent_signed_at",
     )
     .eq("public_token", token)
     .single();
@@ -210,6 +236,15 @@ export async function submitResponse(input: Input) {
       ? "signed and approved the proposal"
       : `signed (${role === "parent" ? "parent/guardian" : "player"}), awaiting co-signature`,
   });
+
+  // When it's fully signed, confirm to the player too.
+  if (fullySigned) {
+    await notifyPlayerSigned({
+      to: proposal.player_email,
+      playerName: proposal.player_name,
+      reference: proposal.reference,
+    });
+  }
 
   revalidatePath(`/p/${token}`);
   return { ok: true };
